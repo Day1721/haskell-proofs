@@ -27,6 +27,7 @@ type a ~> b = (a, b) -> Type
 infixr 0 ~>
 type family Apply (f :: a ~> b) (x :: a) :: b
 type f @@ x = Apply f x
+infixl 8 @@
 
 -- class SFun (f :: a ~> b) where
 --     sFun :: Sing (v :: a) -> Sing (f @@ v)
@@ -45,13 +46,19 @@ instance (Single a, Single b) => Single (a ~> b) where
         cast :: Sing (x :: b) -> Sing (y :: b)
         cast = unsafeCoerce
 
+applyEqFunc :: Sing n -> SFunction f -> SFunction g -> f :~: g -> f @@ n :~: g @@ n
+applyEqFunc _ _ _ Refl = Refl
+
+funcEqCoerse :: SFunction f -> SFunction g -> (forall x. Sing x -> f @@ x :~: g @@ x) -> f :~: g
+funcEqCoerse f g p = unsafeCoerce Refl
+
 -- Id :: a -> a
 type F_Id = F_Id0
 data F_Id0 :: a ~> a
 type F_Id1 x = x
 type instance Apply F_Id0 x = F_Id1 x
-f_Id0 :: SFunction F_Id0
-f_Id0 = SFunction { applyFunc = \x -> x }
+f_Id :: SFunction F_Id0
+f_Id = SFunction { applyFunc = \x -> x }
 
 -- Const :: a -> b -> a
 type F_Const = F_Const0
@@ -74,7 +81,7 @@ type F_Compose = F_Compose0
 data F_Compose0 :: (b ~> c) ~> (a ~> b) ~> a ~> c
 data F_Compose1 (f :: b ~> c) :: (a ~> b) ~> a ~> c
 data F_Compose2 (f :: b ~> c) (g :: a ~> b) :: a ~> c
-type F_Compose3 f g x = Apply f (Apply g x)
+type F_Compose3 f g x = f @@ (g @@ x)
 type instance Apply  F_Compose0 f = F_Compose1 f
 type instance Apply (F_Compose1 f) g = F_Compose2 f g
 type instance Apply (F_Compose2 f g) x = F_Compose3 f g x
@@ -100,3 +107,23 @@ f_SApply1 :: SFunction x -> SFunction (F_SApply1 x)
 f_SApply1 x = SFunction { applyFunc = f_SApply2 x }
 f_SApply2 :: SFunction x -> SFunction y -> SFunction (F_SApply2 x y)
 f_SApply2 x y = SFunction { applyFunc = \z -> x @@ z @@ (y @@ z) }
+
+
+type F_Flip = F_Flip0
+data F_Flip0 :: (a ~> b ~> c) ~> b ~> a ~> c
+data F_Flip1 (f :: a ~> b ~> c) :: b ~> a ~> c
+data F_Flip2 (f :: a ~> b ~> c) (y :: b) :: a ~> c
+type F_Flip3 f y x = f @@ x @@ y
+type instance Apply F_Flip0 f = F_Flip1 f
+type instance Apply (F_Flip1 f) y = F_Flip2 f y
+type instance Apply (F_Flip2 f y) x = F_Flip3 f y x
+f_Flip :: SFunction F_Flip
+f_Flip = SFunction { applyFunc = f_Flip1 }
+f_Flip1 :: Sing f -> SFunction (F_Flip @@ f)
+f_Flip1 f = SFunction { applyFunc = f_Flip2 f }
+f_Flip2 :: SFunction f -> Sing y -> SFunction (F_Flip @@ f @@ y)
+f_Flip2 f y = SFunction {applyFunc = \x -> f @@ x @@ y}
+
+flipTwiceSame :: SFunction f -> f :~: F_Flip @@ (F_Flip @@ f)
+flipTwiceSame f = funcEqCoerse f (f_Flip @@ (f_Flip @@ f)) $ \x ->
+    funcEqCoerse (f @@ x) (f_Flip @@ (f_Flip @@ f) @@ x) $ const Refl

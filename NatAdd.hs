@@ -37,10 +37,19 @@ natAddComm (SS n) m =   -- S n + m = m + S n
     apply Refl $        -- n + m = m + n
     natAddComm n m
 
+instance AddComm Nat where
+    addComm = natAddComm
+
 natAddAssoc :: SNat n -> SNat m -> SNat k -> n + (m + k) :~: (n + m) + k
 natAddAssoc SZ _ _ = Refl
 natAddAssoc (SS n) m k = apply Refl $ natAddAssoc n m k
 
+instance AddMonoid Nat where
+    addAssoc = natAddAssoc
+    type AddZero = Z
+    addZero = SZ
+    addZeroL n = Refl
+    addZeroR = natAddZ
 
 natAddSameR :: SNat k -> forall n m. n :~: m -> n + k :~: m + k
 natAddSameR _ Refl = Refl
