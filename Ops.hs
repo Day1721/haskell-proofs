@@ -1,15 +1,16 @@
-{-# LANGUAGE    DataKinds
-  ,             TypeFamilies
-  ,             NoStarIsType
-  ,             UndecidableInstances
-  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE NoStarIsType         #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 module Ops where
 
-import Data.Type.Equality
-import Single
+import           Data.Type.Equality
+import           Single
 
 class Single t => Add t where
-    type family (+) (a :: t) (b :: t) :: t 
+    type family (+) (a :: t) (b :: t) :: t
     (.+.) :: Sing (a :: t) -> Sing (b :: t) -> Sing (a + b)
 infixl 6 +
 infixl 6 .+.
@@ -76,9 +77,15 @@ addFlipL n m k =
     addSameR k $
     addComm n m
 
+class AddMonoid t => AddGroup t where
+    type AddInv (a :: t) :: t
+    addInv :: Sing (a :: t) -> Sing (AddInv a)
+    addInvZL :: Sing (a :: t) -> AddInv a + a :~: AddZero
+    addInvZR :: Sing (a :: t) -> a + AddInv a :~: AddZero
+
 
 class Single t => Mul t where
-    type family (*) (a :: t) (b :: t) :: t 
+    type family (*) (a :: t) (b :: t) :: t
     (.*.) :: Sing (a :: t) -> Sing (b :: t) -> Sing (a * b)
 infixl 7 *
 infixl 7 .*.
@@ -92,3 +99,46 @@ type instance Apply (F_Mul1 a) b = F_Mul2 a b
 
 f_Mul1 :: Mul t => Sing (n :: t) -> SFunction (F_Mul1 n)
 f_Mul1 n = SFunction { applyFunc = (n .*.) }
+
+
+
+class Single t => PartOrd t where
+    data family (<=) (a :: t) (b :: t)
+    leRefl :: Sing (a :: t) -> a <= a
+    leAsym :: Sing (a :: t) -> Sing b -> a <= b -> b <= a -> a :~: b
+    leTrans :: Sing (a :: t) -> Sing b -> Sing c -> a <= b -> b <= c -> a <= c
+infix 4 <=
+
+instance (PartOrd t, Single l) => PartOrd (l ~> t) where
+    data (<=) f g = FuncLe (forall x. Sing x -> f @@ x <= g @@ x)
+    leRefl f = FuncLe $ \x -> leRefl (f @@ x)
+    leAsym f g (FuncLe fleg) (FuncLe glef) = funcEqCoerse f g $ \x -> leAsym (f @@ x) (g @@ x) (fleg x) (glef x)
+    leTrans f g h (FuncLe fleg) (FuncLe gleh) = FuncLe $ \x -> leTrans (f @@ x) (g @@ x) (h @@ x) (fleg x) (gleh x)
+
+class PartOrd t => TotalOrd t where
+    leDec :: Sing (a :: t) -> Sing b -> Either (a <= b) (b <= a)
+
+
+
+
+class Single n => Sub n where
+    type (-) (a :: n) (b :: n) :: n
+    (.-.) :: Sing (a :: n) -> Sing b -> Sing (a - b)
+infixl 6 -
+infixl 6 .-.
+
+type F_Sub = F_Sub0
+data F_Sub0 :: t ~> t ~> t
+data F_Sub1 (a :: t) :: t ~> t
+type F_Sub2 a b = a - b
+type instance Apply F_Sub0 a = F_Sub1 a
+type instance Apply (F_Sub1 a) b = F_Sub2 a b
+
+f_Sub :: Sub t => SFunction (F_Sub :: t ~> t ~> t)
+f_Sub = SFunction { applyFunc = f_Sub1 }
+f_Sub1 :: Sub t => Sing (n :: t) -> SFunction (F_Sub1 n)
+f_Sub1 n = SFunction { applyFunc = (n .-.) }
+
+instance (Sub k, Single l) => Sub (l ~> k) where
+    type f - g = F_SApply @@ (F_Compose @@ F_Sub @@ f) @@ g
+    f .-. g = f_SApply @@ (f_Compose @@ f_Sub @@ f) @@ g

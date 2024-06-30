@@ -1,30 +1,29 @@
-{-# LANGUAGE    DataKinds 
-  ,             GADTs 
-  ,             LambdaCase
-  ,             TypeFamilies
-  #-}
+{-# LANGUAGE DataKinds    #-}
+{-# LANGUAGE GADTs        #-}
+{-# LANGUAGE LambdaCase   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module NatAdd where
 
-import Data.Type.Equality
+import           Data.Type.Equality
 
-import Nat
-import Ops
+import           Nat
+import           Ops
 
 instance Add Nat where
     type Z + m = m
     type S n + m = S (n + m)
 
     (.+.) :: SNat n -> SNat m -> SNat (n + m)
-    (.+.) SZ m = m
+    (.+.) SZ m     = m
     (.+.) (SS n) m = SS (n .+. m)
 
 natAddZ :: SNat n -> n + Z :~: n
-natAddZ SZ = Refl
+natAddZ SZ     = Refl
 natAddZ (SS n) = apply Refl $ natAddZ n
 
 natAddS :: SNat n -> SNat m -> n + S m :~: S (n + m)
-natAddS SZ _ = Refl
+natAddS SZ _     = Refl
 natAddS (SS n) m = apply Refl $ natAddS n m
 
 
@@ -41,7 +40,7 @@ instance AddComm Nat where
     addComm = natAddComm
 
 natAddAssoc :: SNat n -> SNat m -> SNat k -> n + (m + k) :~: (n + m) + k
-natAddAssoc SZ _ _ = Refl
+natAddAssoc SZ _ _     = Refl
 natAddAssoc (SS n) m k = apply Refl $ natAddAssoc n m k
 
 instance AddMonoid Nat where

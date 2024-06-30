@@ -1,16 +1,17 @@
-{-# LANGUAGE    DataKinds 
-  ,             GADTs 
-  ,             LambdaCase
-  ,             NoStarIsType
-  ,             TypeFamilies
-  #-}
+{-# LANGUAGE DataKinds    #-}
+{-# LANGUAGE GADTs        #-}
+{-# LANGUAGE LambdaCase   #-}
+{-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas -Wincomplete-patterns #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module Nat where
 
-import Data.Kind
-import Data.Type.Equality
+import           Data.Kind
+import           Data.Type.Equality
 
-import Single
+import           Single
 
 data Nat = Z | S Nat
 
@@ -23,25 +24,24 @@ data F_S0 :: Nat ~> Nat
 type F_S1 n = S n
 type instance Apply F_S0 n = F_S1 n
 f_S :: SFunction F_S
-f_S = SFunction { applyFunc = \n -> SS n}
+f_S = SFunction { applyFunc = SS}
 
 instance Single Nat where
     type Sing n = SNat n
     type Desing Nat = Nat
 
-    fromSing SZ = Z
+    fromSing SZ     = Z
     fromSing (SS n) = S $ fromSing n
 
-    withSing Z f = f SZ
+    withSing Z f     = f SZ
     withSing (S n) f = withSing n $ \n' -> f $ SS n'
 
 instance EqDec Nat where
     SZ =?= SZ = Left Refl
-    SS _ =?= SZ = Right $ \case
-    SZ =?= SS _ = Right $ \case
     SS n =?= SS m = case n =?= m of
-        Left eq -> Left $ apply Refl eq
+        Left eq   -> Left $ apply Refl eq
         Right neq -> Right $ \eq -> neq $ inner eq
+    _ =?= _ = Right $ \case
 
 type N0 = Z
 type N1 = S N0

@@ -1,16 +1,16 @@
-{-# LANGUAGE    DataKinds
-  ,             TypeFamilies
-  ,             TypeFamilyDependencies
-  ,             UndecidableInstances
-  #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas -Wincomplete-patterns #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module Single where
 
-import Data.Kind
-import Data.Type.Equality
-import Data.Void
+import           Data.Kind
+import           Data.Type.Equality
+import           Data.Void
 
-import Unsafe.Coerce
+import           Unsafe.Coerce
 
 class Single k where
     type Sing (a :: k) = r | r -> a
@@ -29,14 +29,12 @@ type family Apply (f :: a ~> b) (x :: a) :: b
 type f @@ x = Apply f x
 infixl 8 @@
 
--- class SFun (f :: a ~> b) where
---     sFun :: Sing (v :: a) -> Sing (f @@ v)
 
-data SFunction (f :: a ~> b) = SFunction {
+newtype SFunction (f :: a ~> b) = SFunction {
     applyFunc :: forall (x :: a). Sing x -> Sing (f @@ x)
 }
-(@@) :: SFunction (f :: a ~> b) -> Sing (x :: a) -> Sing (f @@ x)
-(@@) f = applyFunc f
+(@@) :: SFunction (f :: a ~> b) -> forall x. Sing (x :: a) -> Sing (f @@ x)
+(@@) = applyFunc
 
 instance (Single a, Single b) => Single (a ~> b) where
     type Sing f = SFunction f
@@ -52,13 +50,16 @@ applyEqFunc _ _ _ Refl = Refl
 funcEqCoerse :: SFunction f -> SFunction g -> (forall x. Sing x -> f @@ x :~: g @@ x) -> f :~: g
 funcEqCoerse f g p = unsafeCoerce Refl
 
+singApplyF :: SFunction f -> a :~: b -> f @@ a :~: f @@ b
+singApplyF _ Refl = Refl
+
 -- Id :: a -> a
 type F_Id = F_Id0
 data F_Id0 :: a ~> a
 type F_Id1 x = x
 type instance Apply F_Id0 x = F_Id1 x
 f_Id :: SFunction F_Id0
-f_Id = SFunction { applyFunc = \x -> x }
+f_Id = SFunction { applyFunc = id }
 
 -- Const :: a -> b -> a
 type F_Const = F_Const0
@@ -69,12 +70,7 @@ type instance Apply F_Const0 x = F_Const1 x
 type instance Apply (F_Const1 x) y = F_Const2 x y
 f_Const = SFunction { applyFunc = \x -> f_Const1 x } :: SFunction F_Const
 f_Const1 :: Sing (x :: a) -> forall b. SFunction (F_Const1 x :: b ~> a)
-f_Const1 sx = SFunction { applyFunc = \_ -> sx }
-
--- f_Const1 :: Sing a -> SFunction (F_Const1 a)
--- f_Const1 (x :: Sing a) = SFunction foo where
---     foo :: Sing b -> Sing (F_Const1 a @@ b) 
---     foo b = x
+f_Const1 sx = SFunction { applyFunc = const sx }
 
 -- Compose :: (a -> b) -> (b -> c) -> a -> c
 type F_Compose = F_Compose0

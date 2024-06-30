@@ -163,9 +163,7 @@ natDoubleSumSwap (SS n) (SS m) f =          -- (f m n + Sum f m n) + Sum (f m + 
     flip trans (
         addAssoc (f @@ m @@ n) (monSum (f_Flip @@ f) n @@ m) (monSum (f_Flip @@ f @@ n .+. monSum (f_Flip @@ f) n) m)
     ) $                                     -- f m n + (Sum f m n + Sum (f m + Sum f m) n) = f m n + (Sum (flip f) n m + Sum (flip f n + Sum (flip f) n) m)
-    addSameLX (f @@ m @@ n) 
-        (monSum f m @@ n .+. monSum (f @@ m .+. monSum f m) n) 
-        (monSum (f_Flip @@ f) n @@ m .+. monSum (f_Flip @@ f @@ n .+. monSum (f_Flip @@ f) n) m) $
+    addSameL (f @@ m @@ n) $
     trans (                                 -- Sum f m n + Sum (f m + Sum f m) n = Sum (flip f) n m + Sum (flip f n + Sum (flip f) n) m
         addSameL (monSum f m @@ n) $ sumSplit n (f @@ m) (monSum f m)
     ) $                                     -- Sum f m n + (Sum (f m) n + Sum (Sum f m) n) = Sum (flip f) n m + Sum (flip f n + Sum (flip f) n) m
@@ -178,8 +176,8 @@ natDoubleSumSwap (SS n) (SS m) f =          -- (f m n + Sum f m n) + Sum (f m + 
     flip trans (
         sym $ sumSplit m (f_Flip @@ f @@ n) $ monSum (f_Flip @@ f) n
     ) $                                     -- Sum f m n + Sum (Sum f m) n = Sum (flip f n) m + Sum (Sum (flip f) n) m
-    addBothSameX (monSum f m @@ n) (monSum (monSum f m) n) (monSum (f_Flip @@ f @@ n) m) (monSum (monSum (f_Flip @@ f) n) m) (      -- Sum f m n = Sum (flip f n) m
-        trans (                                 -- Sum f m n = Sum (flip $ flip f) m n
+    addBothSame (                               -- Sum f m n = Sum (flip f n) m
+        trans (                                     -- Sum f m n = Sum (flip $ flip f) m n
             applyEqFunc n (monSum f m) (monSum (f_Flip @@ (f_Flip @@ f)) m) $   -- Sum f m = Sum (flip $ flip f) m
                 sumEqFunc m f (f_Flip @@ (f_Flip @@ f)) $                       -- f = flip $ flip f
                 flipTwiceSame f
