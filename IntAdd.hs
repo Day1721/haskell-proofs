@@ -9,7 +9,6 @@ module IntAdd where
 import           Data.Type.Equality
 import           Int
 import           Nat
-import           NatAdd
 import           Ops
 import           Prelude            hiding (Int)
 import           Single

@@ -1,13 +1,12 @@
 {-# LANGUAGE DataKinds    #-}
 {-# LANGUAGE GADTs        #-}
-{-# LANGUAGE LambdaCase   #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module NatAdd where
+module Nat.Add where
 
 import           Data.Type.Equality
 
-import           Nat
+import           Nat.Defs
 import           Ops
 
 instance Add Nat where

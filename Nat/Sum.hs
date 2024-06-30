@@ -1,35 +1,34 @@
-{-# LANGUAGE    DataKinds 
-  ,             GADTs 
-  ,             LambdaCase
-  ,             NoStarIsType
-  ,             TypeFamilies
-  ,             UndecidableInstances
-  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NoStarIsType         #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-module NatSum where
+module Nat.Sum where
 
-import Data.Type.Equality
+import           Data.Type.Equality
 
-import Nat
-import NatAdd
-import NatMul
-import Ops
-import Single
+import           Nat.Add
+import           Nat.Defs
+import           Nat.Mul
+import           Ops
+import           Single
 
 type family Sum (f :: Nat ~> r) (max :: Nat) :: r where
     Sum f Z = AddZero
     Sum f (S n) = f @@ n + Sum f n
 
 monSum :: AddMonoid k => SFunction (f :: Nat ~> k) -> SNat n -> Sing (Sum f n)
-monSum _ SZ = addZero
+monSum _ SZ     = addZero
 monSum f (SS n) = f @@ n .+. monSum f n
 
 sumZero :: AddMonoid k => SNat n -> Sum (F_Const @@ (AddZero :: k)) n :~: AddZero
-sumZero SZ = Refl
+sumZero SZ     = Refl
 sumZero (SS n) = trans (addZeroL $ monSum (f_Const @@ addZero) n) $ sumZero n
 
 sumFuncApplyDist :: AddMonoid k => SNat n -> SFunction (f :: l ~> Nat ~> k) -> Sing m -> Sum (f @@ m) n :~: Sum (F_Flip @@ f) n @@ m
-sumFuncApplyDist SZ _ _ = Refl
+sumFuncApplyDist SZ _ _     = Refl
 sumFuncApplyDist (SS n) f m = addSameL (f @@ m @@ n) $ sumFuncApplyDist n f m
 
 sumEqFunc :: AddMonoid k => SNat n -> SFunction (f :: Nat ~> k) -> SFunction (g :: Nat ~> k) -> f :~: g -> Sum f n :~: Sum g n
@@ -117,7 +116,7 @@ f_NatOdd :: SFunction NatOdd
 f_NatOdd = SFunction {applyFunc = SS . (n2 .*.)}
 
 natSumOdd :: SNat n -> Sum NatOdd n :~: n * n
-natSumOdd SZ = Refl 
+natSumOdd SZ = Refl
 natSumOdd (SS n) =                      -- S (n + n + 0) + Sum NatOdd n = S n + n * S n
     let isum = natSum f_NatOdd n in
     apply Refl $                        -- (n + (n + 0)) + Sum NatOdd n = n + n * S n
@@ -135,20 +134,20 @@ natSumOdd (SS n) =                      -- S (n + n + 0) + Sum NatOdd n = S n + 
 natSumOdd' :: SNat n -> Sum NatOdd n :~: n * n
 natSumOdd' (n :: SNat n) =      -- Sum NatOdd n = n * n
     let foo :: SFunction ((F_Const @@ N1) + NatEven) = SFunction {applyFunc = \i -> n1 .+. (n2 .*. i)} in
-        -- onepEq :: Sum NatOdd n :~: Sum ((F_Const @@ N1) + NatEven) n = natSumEqEach n f_NatOdd foo (const Refl) in 
-    trans (                     
+        -- onepEq :: Sum NatOdd n :~: Sum ((F_Const @@ N1) + NatEven) n = natSumEqEach n f_NatOdd foo (const Refl) in
+    trans (
         natSumEqEach n f_NatOdd foo (const Refl)
     ) $                         -- Sum (K 1 + NatEven) n = n * n
     trans (
         sumSplit n (f_Const @@ n1) f_NatEven
     ) $                         -- Sum (K 1) n + Sum NatEven n = n * n
     trans (
-        natAddSameR (natSum f_NatEven n) $ trans 
+        natAddSameR (natSum f_NatEven n) $ trans
             (natSumSame n n1)
             (natAddZ n)
     ) $                         -- n + Sum NatEven n = n * n
     case n of
-        SZ -> Refl
+        SZ    -> Refl
         SS n' -> natAddSameL n $ natSumEven n'
 
 

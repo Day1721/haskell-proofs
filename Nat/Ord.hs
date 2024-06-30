@@ -3,11 +3,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
-module NatOrd where
+module Nat.Ord where
 
 import           Data.Type.Equality
 import           Data.Void
-import           Nat
+import           Nat.Defs
 import           Ops
 
 instance PartOrd Nat where

@@ -1,29 +1,27 @@
-{-# LANGUAGE    DataKinds 
-  ,             GADTs 
-  ,             LambdaCase
-  ,             NoStarIsType
-  ,             TypeFamilies
-  ,             UndecidableInstances
-  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NoStarIsType         #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-module NatMul where
+module Nat.Mul where
 
-import Data.Type.Equality
+import           Data.Type.Equality
 
-import Nat
-import NatAdd
-import Ops
+import           Nat.Add
+import           Nat.Defs
+import           Ops
 
 instance Mul Nat where
     type Z * m = Z
     type S n * m = m + n * m
 
     (.*.) :: SNat n -> SNat m -> SNat (n * m)
-    (.*.) SZ _ = SZ
+    (.*.) SZ _     = SZ
     (.*.) (SS n) m = m .+. (n .*. m)
 
 natMulZ :: SNat n -> n * Z :~: Z
-natMulZ SZ = Refl
+natMulZ SZ     = Refl
 natMulZ (SS n) = natMulZ n
 
 natMulS :: SNat n -> SNat m -> n * S m :~: n + n * m
