@@ -27,7 +27,6 @@ type a ~> b = (a, b) -> Type
 infixr 0 ~>
 type family Apply (f :: a ~> b) (x :: a) :: b
 type f @@ x = Apply f x
-infixl 8 @@
 
 
 newtype SFunction (f :: a ~> b) = SFunction {
@@ -35,6 +34,7 @@ newtype SFunction (f :: a ~> b) = SFunction {
 }
 (@@) :: SFunction (f :: a ~> b) -> forall x. Sing (x :: a) -> Sing (f @@ x)
 (@@) = applyFunc
+infixl 8 @@
 
 instance (Single a, Single b) => Single (a ~> b) where
     type Sing f = SFunction f

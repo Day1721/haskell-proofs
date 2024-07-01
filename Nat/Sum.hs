@@ -1,9 +1,10 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NoStarIsType         #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module Nat.Sum where
 
@@ -13,6 +14,7 @@ import           Nat.Add
 import           Nat.Defs
 import           Nat.Mul
 import           Ops
+import           PointwiseFuncOps
 import           Single
 
 type family Sum (f :: Nat ~> r) (max :: Nat) :: r where
@@ -151,7 +153,7 @@ natSumOdd' (n :: SNat n) =      -- Sum NatOdd n = n * n
         SS n' -> natAddSameL n $ natSumEven n'
 
 
-natDoubleSumSwap :: (AddComm k, AddMonoid k) => SNat n -> SNat m -> SFunction (f :: Nat ~> Nat ~> k) -> Sum (Sum f m) n :~: Sum (Sum (F_Flip @@ f) n) m
+natDoubleSumSwap :: AddAbelMonoid k => SNat n -> SNat m -> SFunction (f :: Nat ~> Nat ~> k) -> Sum (Sum f m) n :~: Sum (Sum (F_Flip @@ f) n) m
 natDoubleSumSwap SZ SZ _ = Refl
 natDoubleSumSwap SZ (SS m) _ = trans (sym $ sumZero m) $ sym $ addZeroL $ monSum (f_Const @@ addZero) m
 natDoubleSumSwap (SS n) SZ _ = flip trans (sumZero n) $ addZeroL $ monSum (f_Const @@ addZero) n

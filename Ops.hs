@@ -27,12 +27,6 @@ f_Add = SFunction { applyFunc = f_Add1 }
 f_Add1 :: Add t => Sing (n :: t) -> SFunction (F_Add1 n)
 f_Add1 n = SFunction { applyFunc = (n .+.) }
 
-instance (Add k, Single l) => Add (l ~> k) where
-    type f + g = F_SApply @@ (F_Compose @@ F_Add @@ f) @@ g
-    f .+. g = f_SApply @@ (f_Compose @@ f_Add @@ f) @@ g
-
-funAddApplySwap :: Add a => SFunction (f :: a ~> a) -> SFunction g -> Sing n -> (f + g) @@ n :~: f @@ n + g @@ n
-funAddApplySwap f g n = Refl
 
 addSameL :: Add t => Sing (k :: t) -> forall n m. n :~: m -> k + n :~: k + m
 addSameL _ Refl = Refl
@@ -49,26 +43,16 @@ addBothSame Refl Refl = Refl
 addBothSameX :: Add t => Sing (n :: t) -> Sing k -> Sing m -> Sing l -> n :~: m -> k :~: l -> n + k :~: m + l
 addBothSameX _ _ _ _ Refl Refl = Refl
 
+type AddAssoc t = forall (a :: t) b c. Sing a -> Sing b -> Sing c -> a + (b + c) :~: (a + b) + c
+type AddZeroL t (z :: t) = forall a. Sing a -> z + a :~: a
+type AddZeroR t (z :: t) = forall a. Sing a -> a + z :~: a
+
 class Add t => AddMonoid t where
-    addAssoc :: Sing (n :: t) -> Sing m -> Sing l -> n + (m + l) :~: (n + m) + l
+    addAssoc :: AddAssoc t
     type family AddZero :: t
     addZero :: Sing (AddZero :: t)
-    addZeroL :: Sing (n :: t) -> AddZero + n :~: n
-    addZeroR :: Sing (n :: t) -> n + AddZero :~: n
-
-instance (AddMonoid t, Single l) => AddMonoid (l ~> t) where
-    addAssoc f g h = funcEqCoerse (f .+. (g .+. h)) ((f .+. g) .+. h) $ \x -> addAssoc (f @@ x) (g @@ x) (h @@ x)
-    type AddZero = F_Const @@ AddZero
-    addZero = f_Const @@ addZero
-    addZeroL f = funcEqCoerse (addZero .+. f) f $ \x -> addZeroL (f @@ x)
-    addZeroR f = funcEqCoerse (f .+. addZero) f $ \x -> addZeroR (f @@ x)
-
-
-class Add t => AddComm t where
-  addComm :: Sing (n :: t) -> Sing (m :: t) -> n + m :~: m + n
-
-instance (AddComm t, Single l) => AddComm (l ~> t) where
-  addComm f g = funcEqCoerse (f .+. g) (g .+. f) $ \x -> addComm (f @@ x) (g @@ x)
+    addZeroL :: AddZeroL t AddZero
+    addZeroR :: AddZeroR t AddZero
 
 addFlipL :: (AddComm t, AddMonoid t) => Sing (n :: t) -> Sing m -> Sing k -> n + (m + k) :~: m + (n + k)
 addFlipL n m k =
@@ -77,12 +61,138 @@ addFlipL n m k =
     addSameR k $
     addComm n m
 
+
+type AddInvZL t (inv :: t ~> t) z = forall a. Sing a -> inv @@ a + a :~: z
+type AddInvZR t (inv :: t ~> t) z = forall a. Sing a -> a + inv @@ a :~: z
+
+addInvZLtoR :: Add t => AddAssoc t -> Sing (z :: t) -> SFunction (inv :: t ~> t) -> AddZeroL t z -> AddInvZL t inv z -> AddInvZR t inv z
+addInvZLtoR assoc z inv zeroL invL a =                       -- a + inv a = z
+    trans (sym $ zeroL $ a .+. inv @@ a) $                  -- z + (a + inv a) = z
+    trans (
+        singApplyF (f_Flip @@ f_Add @@ (a .+. inv @@ a)) $  -- z = inv (inv a) + inv a
+        sym $ invL (inv @@ a)
+    ) $                                                     -- (inv (inv a) + inv a) + (a + inv a) = z
+    trans (
+        sym $ assoc (inv @@ (inv @@ a)) (inv @@ a) $ a .+. inv @@ a
+    ) $                                                     -- inv (inv a) + (inv a + (a + inv a)) = z
+    trans (
+        singApplyF (f_Add @@ (inv @@ (inv @@ a))) $             -- inv a + (a + inv a) = inv a
+        trans (assoc (inv @@ a) a (inv @@ a)) $                 -- (inv a + a) + inv a = inv a
+        trans (
+            singApplyF (f_Flip @@ f_Add @@ (inv @@ a)) $ invL a
+        ) $ zeroL $ inv @@ a
+    ) $                                                     -- inv (inv a) + inv a = z
+    invL $ inv @@ a
+addInvZRtoL :: Add t => AddAssoc t -> Sing (z :: t) -> SFunction (inv :: t ~> t) -> AddZeroR t z -> AddInvZR t inv z -> AddInvZL t inv z
+addInvZRtoL assoc z inv zeroR invR a =                       -- inv a + a = z
+    trans (sym $ zeroR $ inv @@ a .+. a) $                  -- (inv a + a) + z = z
+    trans (
+        singApplyF (f_Add @@ (inv @@ a .+. a)) $            -- z = inv a + inv (inv a)
+        sym $ invR (inv @@ a)
+    ) $                                                     -- (inv a + a) + (inv a + inv (inv a)) = z
+    trans (
+        assoc (inv @@ a .+. a) (inv @@ a) (inv @@ (inv @@ a))
+    ) $                                                     -- ((inv a + a) + inv a) + inv (inv a) = z
+    trans (
+        singApplyF (f_Flip @@ f_Add @@ (inv @@ (inv @@ a))) $   -- (inv a + a) + inv a = inv a
+        trans (sym $ assoc (inv @@ a) a (inv @@ a)) $           -- inv a + (a + inv a) = inv a
+        trans (
+            singApplyF (f_Add @@ (inv @@ a)) $ invR a
+        ) $ zeroR $ inv @@ a
+    ) $                                                     -- inv (inv a) + inv a = z
+    invR $ inv @@ a
+
+addZeroLtoR :: Add t => AddAssoc t -> Sing (z :: t) -> SFunction (inv :: t ~> t) -> AddInvZL t inv z -> AddZeroL t z -> AddZeroR t z
+addZeroLtoR assoc z inv invL zeroL a =                      -- a + z = a
+    let invR = addInvZLtoR assoc z inv zeroL invL in
+    trans (singApplyF (f_Add @@ a) $ sym $ invL a) $        -- a + (inv a + a) = a
+    trans (assoc a (inv @@ a) a) $                          -- (a + inv a) + a = a
+    trans (singApplyF (f_Flip @@ f_Add @@ a) $ invR a) $    -- z + a = a
+    zeroL a
+addZeroRtoL :: Add t => AddAssoc t -> Sing (z :: t) -> SFunction (inv :: t ~> t) -> AddInvZR t inv z -> AddZeroR t z -> AddZeroL t z
+addZeroRtoL assoc z inv invR zeroR a =                          -- z + a = a
+    let invL = addInvZRtoL assoc z inv zeroR invR in
+    trans (singApplyF (f_Flip @@ f_Add @@ a) $ sym $ invR a) $  -- (inv a + a) + a = a
+    trans (sym $ assoc a (inv @@ a) a) $                        -- (a + inv a) + a = a
+    trans (singApplyF (f_Add @@ a) $ invL a) $                  -- z + a = a
+    zeroR a
+
+
+
 class AddMonoid t => AddGroup t where
     type AddInv (a :: t) :: t
     addInv :: Sing (a :: t) -> Sing (AddInv a)
     addInvZL :: Sing (a :: t) -> AddInv a + a :~: AddZero
+    addInvZL = addInvZRtoL addAssoc addZero f_AddInv addZeroR addInvZR
     addInvZR :: Sing (a :: t) -> a + AddInv a :~: AddZero
+    addInvZR = addInvZLtoR addAssoc addZero f_AddInv addZeroL addInvZL
+    {-# MINIMAL addInv, (addInvZL | addInvZR) #-}
 
+type F_AddInv = F_AddInv0
+data F_AddInv0 :: t ~> t
+type F_AddInv1 x = AddInv x
+type instance Apply F_AddInv0 x = F_AddInv1 x
+f_AddInv :: AddGroup t => SFunction (F_AddInv :: t ~> t)
+f_AddInv = SFunction {applyFunc = addInv}
+
+
+
+
+class Add t => AddComm t where
+  addComm :: Sing (n :: t) -> Sing (m :: t) -> n + m :~: m + n
+
+groupInvLUnique :: AddGroup t => Sing (a :: t) -> Sing b -> a + b :~: AddZero -> a :~: AddInv b
+groupInvLUnique a (b :: Sing b) eq =                        -- b = inv a
+    trans (sym $ addZeroR a) $                              -- b + 0 = inv a
+    trans (singApplyF (f_Add @@ a) $ sym $ addInvZR b) $    -- b + (a + inv a) = inv a
+    trans (addAssoc a b $ addInv b) $                       -- (b + a) + inv a = inv a
+    trans (singApplyF (f_Flip @@ f_Add @@ addInv b) eq) $   -- 0 + inv a = inv a
+    addZeroL $ addInv b
+
+groupInvTwiceSame :: AddGroup t => Sing (a :: t) -> AddInv (AddInv a) :~: a
+groupInvTwiceSame a = sym $ groupInvLUnique a (addInv a) $ addInvZR a
+
+groupInvAddSwap :: AddGroup t => Sing (a :: t) -> Sing b -> AddInv (a + b) :~: AddInv b + AddInv a
+groupInvAddSwap a b = sym $                                     -- inv b + inv a = inv (a + b)
+    groupInvLUnique (addInv b .+. addInv a) (a .+. b) $         -- (inv b + inv a) + (a + b) = 0
+    trans (sym $ addAssoc (addInv b) (addInv a) (a .+. b)) $    -- inv b + (inv a + (a + b)) = 0
+    flip trans (addInvZL b) $                                   -- inv b + (inv a + (a + b)) = inv b + b
+    singApplyF (f_Add @@ addInv b) $                            -- inv a + (a + b) = b
+    trans (addAssoc (addInv a) a b) $                           -- (inv a + a) + b = b
+    flip trans (addZeroL b) $                                   -- (inv a + a) + b = 0 + b
+    singApplyF (f_Flip @@ f_Add @@ b) $                         -- inv a + a = 0
+    addInvZL a
+
+type a - b = a + AddInv b
+a .-. b = a .+. addInv b
+infixl 6 -
+infixl 6 .-.
+
+type F_Sub = F_Sub0
+data F_Sub0 :: t ~> t ~> t
+data F_Sub1 (a :: t) :: t ~> t
+type F_Sub2 a b = a - b
+type instance Apply F_Sub0 a = F_Sub1 a
+type instance Apply (F_Sub1 a) b = F_Sub2 a b
+
+f_Sub :: AddGroup t => SFunction (F_Sub :: t ~> t ~> t)
+f_Sub = SFunction { applyFunc = f_Sub1 }
+f_Sub1 :: AddGroup t => Sing (n :: t) -> SFunction (F_Sub1 n)
+f_Sub1 n = SFunction { applyFunc = (n .-.) }
+
+groupInvSubSwap :: AddGroup t => Sing (a :: t) -> Sing b -> AddInv (a - b) :~: b - a
+groupInvSubSwap a b =
+    trans (groupInvAddSwap a $ addInv b) $
+    singApplyF (f_Flip @@ f_Sub @@ a) $
+    groupInvTwiceSame b
+
+groupSubZEq :: AddGroup t => Sing (a :: t) -> Sing b -> b - a :~: AddZero -> a :~: b
+groupSubZEq a b eq = sym $                                  -- b = a
+    trans (sym $ addZeroR b) $                              -- b + 0 = a
+    trans (singApplyF (f_Add @@ b) $ sym $ addInvZL a) $    -- b + (inv a + a) = a
+    trans (addAssoc b (addInv a) a) $                       -- (b - a) + a = a
+    flip trans (addZeroL a) $                               -- (b - a) + a = 0 + a
+    singApplyF (f_Flip @@ f_Add @@ a) eq
 
 class Single t => Mul t where
     type family (*) (a :: t) (b :: t) :: t
@@ -103,14 +213,16 @@ f_Mul1 n = SFunction { applyFunc = (n .*.) }
 
 
 class Single t => PartOrd t where
-    data family (<=) (a :: t) (b :: t)
+    type family (<=) (a :: t) (b :: t)
     leRefl :: Sing (a :: t) -> a <= a
     leAsym :: Sing (a :: t) -> Sing b -> a <= b -> b <= a -> a :~: b
     leTrans :: Sing (a :: t) -> Sing b -> Sing c -> a <= b -> b <= c -> a <= c
 infix 4 <=
 
+newtype FuncLe f g = FuncLe (forall x. Sing x -> f @@ x <= g @@ x)
+
 instance (PartOrd t, Single l) => PartOrd (l ~> t) where
-    data (<=) f g = FuncLe (forall x. Sing x -> f @@ x <= g @@ x)
+    type (<=) f g = FuncLe f g
     leRefl f = FuncLe $ \x -> leRefl (f @@ x)
     leAsym f g (FuncLe fleg) (FuncLe glef) = funcEqCoerse f g $ \x -> leAsym (f @@ x) (g @@ x) (fleg x) (glef x)
     leTrans f g h (FuncLe fleg) (FuncLe gleh) = FuncLe $ \x -> leTrans (f @@ x) (g @@ x) (h @@ x) (fleg x) (gleh x)
@@ -120,25 +232,12 @@ class PartOrd t => TotalOrd t where
 
 
 
+type AddAbelMonoid t = (AddMonoid t, AddComm t)
+type AddAbelGroup t = (AddGroup t, AddComm t)
 
-class Single n => Sub n where
-    type (-) (a :: n) (b :: n) :: n
-    (.-.) :: Sing (a :: n) -> Sing b -> Sing (a - b)
-infixl 6 -
-infixl 6 .-.
 
-type F_Sub = F_Sub0
-data F_Sub0 :: t ~> t ~> t
-data F_Sub1 (a :: t) :: t ~> t
-type F_Sub2 a b = a - b
-type instance Apply F_Sub0 a = F_Sub1 a
-type instance Apply (F_Sub1 a) b = F_Sub2 a b
 
-f_Sub :: Sub t => SFunction (F_Sub :: t ~> t ~> t)
-f_Sub = SFunction { applyFunc = f_Sub1 }
-f_Sub1 :: Sub t => Sing (n :: t) -> SFunction (F_Sub1 n)
-f_Sub1 n = SFunction { applyFunc = (n .-.) }
-
-instance (Sub k, Single l) => Sub (l ~> k) where
-    type f - g = F_SApply @@ (F_Compose @@ F_Sub @@ f) @@ g
-    f .-. g = f_SApply @@ (f_Compose @@ f_Sub @@ f) @@ g
+class (PartOrd t, AddMonoid t) => Absolute t where
+    type Abs (a :: t) :: t
+    abs :: Sing (a :: t) -> Sing (Abs a)
+    absGeZ :: Sing (a :: t) -> AddZero <= Abs a

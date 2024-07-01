@@ -10,10 +10,12 @@ import           Data.Void
 import           Nat.Defs
 import           Ops
 
+data NatLe n m where
+    NatLeZ :: forall n. NatLe n n
+    NatLeS :: forall n m. NatLe n m -> NatLe n (S m)
+
 instance PartOrd Nat where
-    data n <= m where
-        NatLeZ :: forall n. n <= n
-        NatLeS :: forall n m. n <= m -> n <= S m
+    type n <= m = NatLe n m
 
     leRefl _ = NatLeZ
     leTrans _ _ _ aleb NatLeZ             = aleb
@@ -45,8 +47,8 @@ natLeUp n (SS m) (NatLeS nlem) = NatLeS $ natLeUp n m nlem
 
 
 instance TotalOrd Nat where
-  leDec SZ m          = Left $ makeZLeN m
-  leDec n SZ          = Right $ makeZLeN n
-  leDec (SS n) (SS m) = case leDec n m of
-    Left nlem  -> Left $ natLeUp n m nlem
-    Right mlen -> Right $ natLeUp m n mlen
+    leDec SZ m          = Left $ makeZLeN m
+    leDec n SZ          = Right $ makeZLeN n
+    leDec (SS n) (SS m) = case leDec n m of
+        Left nlem  -> Left $ natLeUp n m nlem
+        Right mlen -> Right $ natLeUp m n mlen

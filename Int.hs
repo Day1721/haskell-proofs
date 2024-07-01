@@ -96,6 +96,26 @@ zComposeSP :: F_Compose @@ F_ZS @@ F_ZP :~: F_Id
 zComposeSP = funcEqCoerse (f_Compose @@ f_ZS @@ f_ZP) f_Id intSPId
 
 
+type family N2I (n :: Nat) :: Int where
+    N2I Z = IZ
+    N2I (S n) = IPos n
+nat2Int :: SNat n -> SInt (N2I n)
+nat2Int SZ     = SIZ
+nat2Int (SS n) = SIPos n
+
+type F_N2I = F_N2I0
+data F_N2I0 :: Nat ~> Int
+type F_N2I1 n = N2I n
+type instance Apply F_N2I0 n = F_N2I1 n
+f_N2I :: SFunction F_N2I
+f_N2I = SFunction {applyFunc = nat2Int}
+
+
+-- type family Abs (n :: Int) :: Nat where
+--     Abs IZ = Z
+--     Abs (IPos n) = S n
+--     Abs (INeg n) = S n
+
 type Z0 = IZ
 type Z1 = IPos N0
 type Z2 = IPos N1

@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE UndecidableInstances #-}
 module IntAdd where
 import           Data.Type.Equality
 import           Int
@@ -146,6 +146,8 @@ intAddPosPosL n SZ = Refl
 intAddPosPosL n (SS m) = trans (intAddPosS (SIPos n) m) $ singApplyF f_ZS $ intAddPosPosL n m
 intAddPosPosR :: SNat n -> SNat m -> F_ZAddPos @@ IPos n @@ m :~: IPos (n + m)
 intAddPosPosR n m = trans (intAddPosPosL n m) $ apply Refl $ addComm m n
+addPos3 :: SNat n -> SNat m -> IPos n + IPos m :~: IPos (S n + m)
+addPos3 n m = trans (intAddPosS (SIPos m) n) $ singApplyF f_ZS $ intAddPosPosL m n
 
 
 intAddNegNegL :: SNat n -> SNat m -> F_ZAddNeg @@ INeg n @@ m :~: INeg (m + n)
@@ -153,6 +155,8 @@ intAddNegNegL n SZ = Refl
 intAddNegNegL n (SS m) = trans (intAddNegP (SINeg n) m) $ singApplyF f_ZP $ intAddNegNegL n m
 intAddNegNegR :: SNat n -> SNat m -> F_ZAddNeg @@ INeg n @@ m :~: INeg (n + m)
 intAddNegNegR n m = trans (intAddNegNegL n m) $ apply Refl $ addComm m n
+addNeg3 :: SNat n -> SNat m -> INeg n + INeg m :~: INeg (S n + m)
+addNeg3 n m = trans (intAddNegP (SINeg m) n) $ singApplyF f_ZP $ intAddNegNegL m n
 
 intAddZ1 :: SInt i -> i + Z1 :~: F_ZS @@ i
 intAddZ1 SIZ            = Refl
@@ -190,3 +194,20 @@ instance AddComm Int where
     addComm SIZ i       = sym $ addZeroR i
     addComm (SIPos n) i = sym $ intAddRPos i n
     addComm (SINeg n) i = sym $ intAddRNeg i n
+
+instance AddGroup Int where
+    type AddInv IZ = IZ
+    type AddInv (IPos n) = INeg n
+    type AddInv (INeg n) = IPos n
+    addInv SIZ       = SIZ
+    addInv (SIPos n) = SINeg n
+    addInv (SINeg n) = SIPos n
+    addInvZR SIZ       = Refl
+    addInvZR (SIPos n) = go n where
+        go :: SNat n -> F_ZAddPos @@ INeg n @@ S n :~: IZ
+        go SZ     = Refl
+        go (SS n) = go n
+    addInvZR (SINeg n) = go n where
+        go :: SNat n -> F_ZAddNeg @@ IPos n @@ S n :~: IZ
+        go SZ     = Refl
+        go (SS n) = go n
