@@ -15,6 +15,7 @@ import           Nat.Defs
 import           Nat.Mul
 import           Ops
 import           PointwiseFuncOps
+import           SFuncUnsafe
 import           Single
 
 type family Sum (f :: Nat ~> r) (max :: Nat) :: r where

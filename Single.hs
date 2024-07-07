@@ -47,9 +47,6 @@ instance (Single a, Single b) => Single (a ~> b) where
 applyEqFunc :: Sing n -> SFunction f -> SFunction g -> f :~: g -> f @@ n :~: g @@ n
 applyEqFunc _ _ _ Refl = Refl
 
-funcEqCoerse :: SFunction f -> SFunction g -> (forall x. Sing x -> f @@ x :~: g @@ x) -> f :~: g
-funcEqCoerse f g p = unsafeCoerce Refl
-
 singApplyF :: SFunction f -> a :~: b -> f @@ a :~: f @@ b
 singApplyF _ Refl = Refl
 
@@ -64,13 +61,13 @@ f_Id = SFunction { applyFunc = id }
 -- Const :: a -> b -> a
 type F_Const = F_Const0
 data F_Const0 :: a ~> b ~> a
-data F_Const1 x :: b ~> a
+data F_Const1 (x :: a) :: b ~> a
 type F_Const2 x y = x
 type instance Apply F_Const0 x = F_Const1 x
 type instance Apply (F_Const1 x) y = F_Const2 x y
-f_Const = SFunction { applyFunc = \x -> f_Const1 x } :: SFunction F_Const
-f_Const1 :: Sing (x :: a) -> forall b. SFunction (F_Const1 x :: b ~> a)
-f_Const1 sx = SFunction { applyFunc = const sx }
+f_Const = SFunction { applyFunc = f_Const1 } :: SFunction F_Const
+f_Const1 :: Sing x -> SFunction (F_Const1 x)
+f_Const1 x = SFunction { applyFunc = const x }
 
 -- Compose :: (a -> b) -> (b -> c) -> a -> c
 type F_Compose = F_Compose0
@@ -119,7 +116,3 @@ f_Flip1 :: Sing f -> SFunction (F_Flip @@ f)
 f_Flip1 f = SFunction { applyFunc = f_Flip2 f }
 f_Flip2 :: SFunction f -> Sing y -> SFunction (F_Flip @@ f @@ y)
 f_Flip2 f y = SFunction {applyFunc = \x -> f @@ x @@ y}
-
-flipTwiceSame :: SFunction f -> f :~: F_Flip @@ (F_Flip @@ f)
-flipTwiceSame f = funcEqCoerse f (f_Flip @@ (f_Flip @@ f)) $ \x ->
-    funcEqCoerse (f @@ x) (f_Flip @@ (f_Flip @@ f) @@ x) $ const Refl

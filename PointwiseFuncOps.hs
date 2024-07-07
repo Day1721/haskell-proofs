@@ -4,6 +4,7 @@ module PointwiseFuncOps where
 
 import           Data.Type.Equality
 import           Ops
+import           SFuncUnsafe
 import           Single
 
 instance (Add k, Single l) => Add (l ~> k) where

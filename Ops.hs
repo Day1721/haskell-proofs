@@ -219,14 +219,6 @@ class Single t => PartOrd t where
     leTrans :: Sing (a :: t) -> Sing b -> Sing c -> a <= b -> b <= c -> a <= c
 infix 4 <=
 
-newtype FuncLe f g = FuncLe (forall x. Sing x -> f @@ x <= g @@ x)
-
-instance (PartOrd t, Single l) => PartOrd (l ~> t) where
-    type (<=) f g = FuncLe f g
-    leRefl f = FuncLe $ \x -> leRefl (f @@ x)
-    leAsym f g (FuncLe fleg) (FuncLe glef) = funcEqCoerse f g $ \x -> leAsym (f @@ x) (g @@ x) (fleg x) (glef x)
-    leTrans f g h (FuncLe fleg) (FuncLe gleh) = FuncLe $ \x -> leTrans (f @@ x) (g @@ x) (h @@ x) (fleg x) (gleh x)
-
 class PartOrd t => TotalOrd t where
     leDec :: Sing (a :: t) -> Sing b -> Either (a <= b) (b <= a)
 

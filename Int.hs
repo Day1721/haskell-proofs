@@ -89,13 +89,6 @@ intSPId = \case
     SIPos (SS _) -> Refl
     SINeg _ -> Refl
 
-zComposePS :: F_Compose @@ F_ZP @@ F_ZS :~: F_Id
-zComposePS = funcEqCoerse (f_Compose @@ f_ZP @@ f_ZS) f_Id intPSId
-
-zComposeSP :: F_Compose @@ F_ZS @@ F_ZP :~: F_Id
-zComposeSP = funcEqCoerse (f_Compose @@ f_ZS @@ f_ZP) f_Id intSPId
-
-
 type family N2I (n :: Nat) :: Int where
     N2I Z = IZ
     N2I (S n) = IPos n
