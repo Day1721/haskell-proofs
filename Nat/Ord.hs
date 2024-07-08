@@ -7,6 +7,7 @@ module Nat.Ord where
 
 import           Data.Type.Equality
 import           Data.Void
+import           Nat.Add
 import           Nat.Defs
 import           Ops
 
@@ -52,3 +53,10 @@ instance TotalOrd Nat where
     leDec (SS n) (SS m) = case leDec n m of
         Left nlem  -> Left $ natLeUp n m nlem
         Right mlen -> Right $ natLeUp m n mlen
+
+data LeDiffEx n m where
+    LeDiffEx :: SNat k -> k + n :~: m -> LeDiffEx n m
+natLeDiff :: SNat n -> SNat m -> n <= m -> LeDiffEx n m
+natLeDiff n m NatLeZ = LeDiffEx SZ Refl
+natLeDiff n (SS m) (NatLeS le) = case natLeDiff n m le of
+    LeDiffEx k eq -> LeDiffEx (SS k) $ apply Refl eq
