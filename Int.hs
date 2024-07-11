@@ -44,36 +44,40 @@ instance EqDec Int where
 
 type F_ZS = F_ZS0
 data F_ZS0 :: Int ~> Int
-type family F_ZS1 (i :: Int) where
-    F_ZS1 IZ = IPos Z
-    F_ZS1 (IPos n) = IPos (S n)
-    F_ZS1 (INeg Z) = IZ
-    F_ZS1 (INeg (S n)) = INeg n
+type F_ZS1 i = ZS i
+type family ZS (i :: Int) where
+    ZS IZ = IPos Z
+    ZS (IPos n) = IPos (S n)
+    ZS (INeg Z) = IZ
+    ZS (INeg (S n)) = INeg n
 type instance Apply F_ZS0 n = F_ZS1 n
 f_ZS :: SFunction F_ZS
-f_ZS = SFunction {applyFunc = \case
+f_ZS = SFunction {applyFunc = zS }
+zS :: SInt i -> SInt (ZS i)
+zS = \case
     SIZ -> SIPos SZ
     SIPos n -> SIPos (SS n)
     SINeg SZ -> SIZ
     SINeg (SS n) -> SINeg n
-}
 
 
 type F_ZP = F_ZP0
 data F_ZP0 :: Int ~> Int
-type family F_ZP1 (i :: Int) where
-    F_ZP1 IZ = INeg Z
-    F_ZP1 (IPos Z) = IZ
-    F_ZP1 (IPos (S n)) = IPos n
-    F_ZP1 (INeg n) = INeg (S n)
+type F_ZP1 i = ZP i
+type family ZP (i :: Int) where
+    ZP IZ = INeg Z
+    ZP (IPos Z) = IZ
+    ZP (IPos (S n)) = IPos n
+    ZP (INeg n) = INeg (S n)
 type instance Apply F_ZP0 n = F_ZP1 n
 f_ZP :: SFunction F_ZP
-f_ZP = SFunction {applyFunc = \case
+f_ZP = SFunction {applyFunc = zP }
+zP :: SInt i -> SInt (ZP i)
+zP = \case
     SIZ -> SINeg SZ
     SIPos SZ -> SIZ
     SIPos (SS n) -> SIPos n
     SINeg n -> SINeg (SS n)
-}
 
 intPSId :: SInt i -> F_ZP @@ (F_ZS @@ i) :~: i
 intPSId = \case
@@ -103,11 +107,6 @@ type instance Apply F_N2I0 n = F_N2I1 n
 f_N2I :: SFunction F_N2I
 f_N2I = SFunction {applyFunc = nat2Int}
 
-
--- type family Abs (n :: Int) :: Nat where
---     Abs IZ = Z
---     Abs (IPos n) = S n
---     Abs (INeg n) = S n
 
 type Z0 = IZ
 type Z1 = IPos N0

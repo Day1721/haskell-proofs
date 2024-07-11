@@ -194,6 +194,9 @@ groupSubZEq a b eq = sym $                                  -- b = a
     flip trans (addZeroL a) $                               -- (b - a) + a = 0 + a
     singApplyF (f_Flip @@ f_Add @@ a) eq
 
+groupInvZ :: AddGroup t => AddInv AddZero :~: (AddZero :: t)
+groupInvZ = trans (sym $ addZeroL $ addInv addZero) $ addInvZR addZero
+
 class Single t => Mul t where
     type family (*) (a :: t) (b :: t) :: t
     (.*.) :: Sing (a :: t) -> Sing (b :: t) -> Sing (a * b)
@@ -211,6 +214,16 @@ f_Mul1 :: Mul t => Sing (n :: t) -> SFunction (F_Mul1 n)
 f_Mul1 n = SFunction { applyFunc = (n .*.) }
 
 
+class Mul t => MulMonoid t where
+    mulAssoc :: Sing @t a -> Sing b -> Sing c -> a * (b * c) :~: (a * b) * c
+    type MulOne :: t
+    mulOneL :: Sing @t a -> MulOne * a :~: a
+    mulOneR :: Sing @t a -> a * MulOne :~: a
+
+
+class Mul t => MulComm t where
+    mulComm :: Sing @t a -> Sing b -> a * b :~: b * a
+
 
 class Single t => PartOrd t where
     type family (<=) (a :: t) (b :: t)
@@ -227,9 +240,26 @@ class PartOrd t => TotalOrd t where
 type AddAbelMonoid t = (AddMonoid t, AddComm t)
 type AddAbelGroup t = (AddGroup t, AddComm t)
 
+groupAdd4SwapInner :: AddAbelGroup t => Sing @t a -> Sing b -> Sing c -> Sing d -> (a + b) + (c + d) :~: (a + c) + (b + d)
+groupAdd4SwapInner a b c d =                    -- (a + b) + (c + d) = (a + c) + (b + d)
+    trans (sym $ addAssoc a b (c .+. d)) $      -- a + (b + (c + d)) = (a + c) + (b + d)
+    trans (singApplyF (f_Add @@ a) $                                -- b + (c + d) = c + (b + d)
+        trans (addAssoc b c d) $                                    -- (b + c) + d = c + (b + d)
+        trans (singApplyF (f_Flip @@ f_Add @@ d) $ addComm b c) $   -- (c + d) + d = c + (b + d)
+        sym $ addAssoc c b d
+    ) $                                         -- a + (c + (b + d)) = (a + c) + (b + d)
+    addAssoc a c $ b .+. d
+
+
+class (AddAbelGroup t, MulMonoid t) => AddMulRing t where
+    addMulDistL :: Sing @t a -> Sing b -> Sing c -> c * (a + b) :~: c * a + c * b
+    addMulDistR :: Sing @t a -> Sing b -> Sing c -> (a + b) * c :~: a * c + b * c
+
+
 
 
 class (PartOrd t, AddMonoid t) => Absolute t where
     type Abs (a :: t) :: t
     abs :: Sing (a :: t) -> Sing (Abs a)
     absGeZ :: Sing (a :: t) -> AddZero <= Abs a
+    absZIffZ :: Sing (a :: t) -> Abs a :~: AddZero -> a :~: AddZero

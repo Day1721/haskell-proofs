@@ -58,6 +58,12 @@ natMulAssoc (SS n) m k =        -- m * k + n * (m * k) = (m + n * m) * k
     natAddSameL (m .*. k) $
     natMulAssoc n m k
 
+instance MulMonoid Nat where
+    mulAssoc = natMulAssoc
+    type MulOne = N1
+    mulOneL = addZeroR
+    mulOneR n = trans (natMulS n SZ) $ gcastWith (natMulZ n) $ natAddZ n
+
 
 natMulComm :: SNat n -> SNat m -> n * m :~: m * n
 natMulComm SZ m = sym $ natMulZ m
@@ -67,6 +73,9 @@ natMulComm (SS n) m =           -- m + n * m = m * S n
     ) $                         -- m + n * m = m + m * n
     natAddSameL m $
     natMulComm n m
+
+instance MulComm Nat where
+    mulComm = natMulComm
 
 natAddMulDistL :: SNat n -> SNat m -> SNat k -> k * (n + m) :~: k * n + k * m
 natAddMulDistL n m k =
