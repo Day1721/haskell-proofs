@@ -263,3 +263,5 @@ class (PartOrd t, AddMonoid t) => Absolute t where
     abs :: Sing (a :: t) -> Sing (Abs a)
     absGeZ :: Sing (a :: t) -> AddZero <= Abs a
     absZIffZ :: Sing (a :: t) -> Abs a :~: AddZero -> a :~: AddZero
+    absMul :: Sing (a :: t) -> Sing b -> Abs (a * b) :~: Abs a * Abs b
+    absTriangle :: Sing (a :: t) -> Sing b -> Abs (a + b) <= Abs a + Abs b

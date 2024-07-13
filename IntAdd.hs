@@ -228,3 +228,10 @@ intAddInvP SIZ            = Refl
 intAddInvP (SINeg n)      = Refl
 intAddInvP (SIPos SZ)     = Refl
 intAddInvP (SIPos (SS n)) = Refl
+
+
+
+intAddN2I :: SNat n -> SNat m -> N2I (n + m) :~: N2I n + N2I m
+intAddN2I SZ _          = Refl
+intAddN2I (SS n) SZ     = gcastWith (addZeroR n) $ sym $ addZeroR $ SIPos n
+intAddN2I (SS n) (SS m) = gcastWith (natAddS n m) $ sym $ addPos3 n m

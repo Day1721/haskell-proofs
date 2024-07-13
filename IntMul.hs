@@ -137,6 +137,20 @@ intMulPR (SIPos n) j = gcastWith (intAddInvP j) $ intMulNatP j (SS n)
 intMulPR (SINeg n) j = gcastWith (intAddInvP j) $ intMulNatS (addInv j) (SS n)
 
 
+intMulPos3 :: SNat n -> SNat m -> IPos n * IPos m :~: N2I (S n * S m)
+intMulPos3 SZ m     = gcastWith (addZeroR m) $ addZeroR $ SIPos m
+intMulPos3 (SS n) m =                                       -- pos m + pos n * pos m = n2i$ S m + S n * S m
+    flip trans (sym $ intAddN2I (SS m) (SS n .*. SS m)) $   -- pos m + pos n * pos m = pos m + n2i$ S n * S m
+    singApplyF (f_Add @@ SIPos m) $ intMulPos3 n m
+intMulNeg3 :: SNat n -> SNat m -> INeg n * INeg m :~: N2I (S n * S m)
+intMulNeg3 = intMulPos3
+
+intMulNegPos :: SNat n -> SNat m -> INeg n * IPos m :~: AddInv (N2I (S n * S m))
+intMulNegPos n m = gcastWith (intMulPos3 n m) $ sym $ intMulInvL (SIPos n) $ SIPos m
+intMulPosNeg :: SNat n -> SNat m -> IPos n * INeg m :~: AddInv (N2I (S n * S m))
+intMulPosNeg = intMulNegPos
+
+
 intAddMulDistR :: SInt i -> SInt j -> SInt k -> (i + j) * k :~: i * k + j * k
 intAddMulDistR SIZ j k        = Refl
 intAddMulDistR (SIPos SZ) j k = gcastWith (addZeroR k) $ intMulSL j k
