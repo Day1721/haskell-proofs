@@ -7,11 +7,12 @@
 module IntMul where
 
 import           Data.Type.Equality
+import           Distribution.Compat.Lens (_1)
 import           Int
 import           IntAdd
 import           Nat
 import           Ops
-import           Prelude            hiding (Int)
+import           Prelude                  hiding (Int)
 import           Single
 
 type F_IntMulNat = F_IntMulNat0
@@ -197,3 +198,24 @@ instance MulMonoid Int where
 instance AddMulRing Int where
   addMulDistL = intAddMulDistL
   addMulDistR = intAddMulDistR
+
+
+mulM1R :: SInt i -> i * ZM1 :~: AddInv i
+mulM1R SIZ            = Refl
+mulM1R (SIPos SZ)     = Refl
+mulM1R (SIPos (SS n)) = singApplyF f_ZP $ mulM1R $ SIPos n
+mulM1R (SINeg SZ)     = Refl
+mulM1R (SINeg (SS n)) = singApplyF f_ZS $ mulM1R $ SINeg n
+
+instance MulComm Int where
+    mulComm SIZ b = sym $ intMulZ b
+    mulComm (SIPos n) b = go n b where
+        go :: SNat n -> SInt b -> IPos n * b :~: b * IPos n
+        go SZ b = trans (addZeroR b) $ sym $ mulOneR b
+        go (SS n) b = trans (singApplyF (f_Add @@ b) $ go n b) $
+            sym $ intMulSR b $ SIPos n
+    mulComm (SINeg n) b = go n b where
+        go :: SNat n -> SInt b -> INeg n * b :~: b * INeg n
+        go SZ b = trans (addZeroR $ addInv b) $ sym $ mulM1R b
+        go (SS n) b = trans (singApplyF (f_Add @@ addInv b) $ go n b) $
+            sym $ intMulPR b $ SINeg n
