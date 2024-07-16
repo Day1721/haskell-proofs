@@ -10,6 +10,8 @@ module Nat.Sum where
 
 import           Data.Type.Equality
 
+import           Add
+import           Mul
 import           Nat.Add
 import           Nat.Defs
 import           Nat.Mul

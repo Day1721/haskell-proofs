@@ -5,6 +5,7 @@
 
 module Nat.Ord where
 
+import           Add
 import           Data.Type.Equality
 import           Data.Void
 import           Nat.Add

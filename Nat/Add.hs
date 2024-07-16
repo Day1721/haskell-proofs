@@ -6,8 +6,8 @@ module Nat.Add where
 
 import           Data.Type.Equality
 
+import           Add
 import           Nat.Defs
-import           Ops
 
 instance Add Nat where
     type Z + m = m

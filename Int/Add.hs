@@ -5,11 +5,11 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
-module IntAdd where
+module Int.Add where
+import           Add
 import           Data.Type.Equality
-import           Int
+import           Int.Defs
 import           Nat
-import           Ops
 import           Prelude            hiding (Int)
 import           Single
 

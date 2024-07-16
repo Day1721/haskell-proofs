@@ -2,10 +2,11 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
-module IntOrd where
+module Int.Ord where
+import           Add
 import           Data.Type.Equality
-import           Int
-import           IntAdd
+import           Int.Add
+import           Int.Defs
 import           Nat
 import           Ops
 import           Prelude            hiding (Int)

@@ -4,14 +4,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
-module IntMul where
+module Int.Mul where
 
+import           Add
 import           Data.Type.Equality
 import           Distribution.Compat.Lens (_1)
-import           Int
-import           IntAdd
+import           Int.Add
+import           Int.Defs
+import           Mul
 import           Nat
-import           Ops
 import           Prelude                  hiding (Int)
 import           Single
 

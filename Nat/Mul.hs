@@ -8,9 +8,10 @@ module Nat.Mul where
 
 import           Data.Type.Equality
 
+import           Add
+import           Mul
 import           Nat.Add
 import           Nat.Defs
-import           Ops
 
 instance Mul Nat where
     type Z * m = Z

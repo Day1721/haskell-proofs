@@ -2,6 +2,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module PointwiseFuncOps where
 
+import           Add
 import           Data.Type.Equality
 import           Ops
 import           SFuncUnsafe

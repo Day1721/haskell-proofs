@@ -2,13 +2,14 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
-module IntSign where
+module Int.Sign where
 
+import           Add
 import           Data.Type.Equality
-import           Int
-import           IntAdd
-import           IntMul
-import           IntOrd
+import           Int.Add
+import           Int.Defs
+import           Int.Mul
+import           Int.Ord
 import           Nat
 import           Ops
 import           Prelude            hiding (Int, abs)
