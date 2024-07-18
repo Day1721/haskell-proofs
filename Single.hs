@@ -22,6 +22,8 @@ class Single k where
 class Single k => EqDec k where
     (=?=) :: Sing (a :: k) -> Sing (b :: k) -> Either (a :~: b) (a :~: b -> Void)
 
+type a =/= b = a :~: b -> Void
+infix 4 =/=
 
 type a ~> b = (a, b) -> Type
 infixr 0 ~>

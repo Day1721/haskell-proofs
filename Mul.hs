@@ -38,30 +38,7 @@ class Mul t => MulComm t where
     mulComm :: Sing @t a -> Sing b -> a * b :~: b * a
 
 
-class Single t => PartOrd t where
-    type family (<=) (a :: t) (b :: t)
-    leRefl :: Sing (a :: t) -> a <= a
-    leAsym :: Sing (a :: t) -> Sing b -> a <= b -> b <= a -> a :~: b
-    leTrans :: Sing (a :: t) -> Sing b -> Sing c -> a <= b -> b <= c -> a <= c
-infix 4 <=
-
-class PartOrd t => TotalOrd t where
-    leDec :: Sing (a :: t) -> Sing b -> Either (a <= b) (b <= a)
-
-
-
 
 class (AddAbelGroup t, MulMonoid t) => AddMulRing t where
     addMulDistL :: Sing @t a -> Sing b -> Sing c -> c * (a + b) :~: c * a + c * b
     addMulDistR :: Sing @t a -> Sing b -> Sing c -> (a + b) * c :~: a * c + b * c
-
-
-
-
-class (PartOrd t, AddMonoid t) => Absolute t where
-    type Abs (a :: t) :: t
-    abs :: Sing (a :: t) -> Sing (Abs a)
-    absGeZ :: Sing (a :: t) -> AddZero <= Abs a
-    absZIffZ :: Sing (a :: t) -> Abs a :~: AddZero -> a :~: AddZero
-    absMul :: Sing (a :: t) -> Sing b -> Abs (a * b) :~: Abs a * Abs b
-    absTriangle :: Sing (a :: t) -> Sing b -> Abs (a + b) <= Abs a + Abs b

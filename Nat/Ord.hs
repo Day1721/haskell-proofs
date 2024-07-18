@@ -27,7 +27,7 @@ instance PartOrd Nat where
     leTrans _ _ _ aleb NatLeZ             = aleb
     leTrans a b (SS c) aleb (NatLeS blec) = NatLeS $ leTrans a b c aleb blec
     leAsym _ _ NatLeZ _           = Refl
-    leAsym a (SS b) (NatLeS aleb) sblea = let sbleb = leTrans (SS b) a b sblea aleb in absurd $ natSmLeM b sbleb
+    leAsym a (SS b) (NatLeS aleb) sblea = let sbleb = leTrans (SS b) a b sblea aleb in absurd $ natSnLeN b sbleb
 
 natSmLeZ :: SNat n -> S n <= Z -> Void
 natSmLeZ SZ snLeZ = case snLeZ of {}
@@ -38,9 +38,9 @@ natLeDown _ _ NatLeZ             = NatLeZ
 natLeDown n SZ (NatLeS nlem)     = absurd $ natSmLeZ n nlem
 natLeDown n (SS m) (NatLeS nlem) = NatLeS $ natLeDown n m nlem
 
-natSmLeM :: SNat m -> S m <= m -> Void
-natSmLeM SZ le     = case le of {}
-natSmLeM (SS n) le = natSmLeM n $ natLeDown (SS n) n le
+natSnLeN :: SNat n -> S n <= n -> Void
+natSnLeN SZ le     = natSmLeZ SZ le
+natSnLeN (SS n) le = natSnLeN n $ natLeDown (SS n) n le
 
 
 natZLeN :: SNat n -> Z <= n
@@ -50,10 +50,6 @@ natZLeN (SS n) = NatLeS $ natZLeN n
 natLeUp :: SNat n -> SNat m -> n <= m -> S n <= S m
 natLeUp _ _ NatLeZ             = NatLeZ
 natLeUp n (SS m) (NatLeS nlem) = NatLeS $ natLeUp n m nlem
-
-natSnLeN :: SNat n -> S n <= n -> Void
-natSnLeN SZ le     = natSmLeZ SZ le
-natSnLeN (SS n) le = natSnLeN n $ natLeDown (SS n) n le
 
 
 instance TotalOrd Nat where
@@ -94,6 +90,20 @@ leCompare n m = case leDec n m of
     Left (NatLeS le)  -> let SS m' = m in NatCmpLt $ natLeUp n m' le
     Right NatLeZ      -> NatCmpEq Refl
     Right (NatLeS le) -> let SS n' = n in NatCmpGt $ natLeUp m n' le
+
+
+natNLeNplusKL :: SNat n -> SNat k -> n <= k + n
+natNLeNplusKL n SZ     = NatLeZ
+natNLeNplusKL n (SS k) = NatLeS $ natNLeNplusKL n k
+
+natNLeNplusKR :: SNat n -> SNat k -> n <= n + k
+natNLeNplusKR n k = gcastWith (addComm n k) $ natNLeNplusKL n k
+
+natNLeNKL :: SNat n -> SNat k -> n <= S k * n
+natNLeNKL n k = natNLeNplusKR n $ k .*. n
+
+natNLeNKR :: SNat n -> SNat k -> n <= n * S k
+natNLeNKR n k = gcastWith (mulComm n $ SS k) $ natNLeNKL n k
 
 natLeAddMonoL :: SNat k -> SNat n -> SNat m -> n <= m -> k + n <= k + m
 natLeAddMonoL SZ _ _ eq = eq
@@ -168,12 +178,12 @@ natMulSameL (SS k) n m eq = case leCompare n m of
         let mul_snlem = natLeMulMonoL (SS $ SS k) (SS n) m snlem in
         let mul_snlen = leCastR (SS (SS k) .*. SS n) (sym eq) mul_snlem in
         let unmul = natLeMulMonoLRev (SS k) (SS n) n mul_snlen in
-        case natSnLeN n unmul of {}
+        absurd $ natSnLeN n unmul
     NatCmpGt smlen ->
         let mul_smlen = natLeMulMonoL (SS $ SS k) (SS m) n smlen in
         let mul_smlem = leCastR (SS (SS k) .*. SS m) eq mul_smlen in
         let unmul = natLeMulMonoLRev (SS k) (SS m) m mul_smlem in
-        case natSnLeN m unmul of {}
+        absurd $ natSnLeN m unmul
 
 natMulSameR :: SNat k -> SNat n -> SNat m -> n * S k :~: m * S k -> n :~: m
 natMulSameR k n m eq = gcastWith (mulComm n $ SS k) $ gcastWith (mulComm m $ SS k) $ natMulSameL k n m eq
