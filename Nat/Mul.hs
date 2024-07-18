@@ -3,6 +3,7 @@
 {-# LANGUAGE NoStarIsType         #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Nat.Mul where
 
@@ -12,6 +13,7 @@ import           Add
 import           Mul
 import           Nat.Add
 import           Nat.Defs
+import           Single
 
 instance Mul Nat where
     type Z * m = Z
@@ -34,8 +36,8 @@ natMulS (SS n) m =                  -- S m + n * S m = S n + (m + n * m)
     ) $                             -- m + n * S m = (m + n * m) + n
     flip trans (
         natAddAssoc m (n .*. m) n
-    ) $                             -- m + n * S n = m + (n * m + n)
-    natAddSameL m $
+    ) $                             -- m + n * S m = m + (n * m + n)
+    singApplyF (f_Add @@ m) $       -- n * S m = n * m + n
     trans (natMulS n m) $
     natAddComm n $ n .*. m
 
@@ -46,7 +48,7 @@ natAddMulDistR (SS n) m k =     -- k + (n + m) * k = (k + n * k) + m * k
     flip trans (
         natAddAssoc k (n .*. k) (m .*. k)
     ) $                         -- k + (n + m) * k = k + (n * k + m * k)
-    natAddSameL k $
+    singApplyF (f_Add @@ k) $
     natAddMulDistR n m k
 
 
@@ -56,7 +58,7 @@ natMulAssoc (SS n) m k =        -- m * k + n * (m * k) = (m + n * m) * k
     flip trans (
         sym $ natAddMulDistR m (n .*. m) k
     ) $                         -- m * k + n * (m * k) = m * k + (n * m) * k
-    natAddSameL (m .*. k) $
+    singApplyF (f_Add @@ (m .*. k)) $
     natMulAssoc n m k
 
 instance MulMonoid Nat where
@@ -72,7 +74,7 @@ natMulComm (SS n) m =           -- m + n * m = m * S n
     flip trans (
         sym $ natMulS m n
     ) $                         -- m + n * m = m + m * n
-    natAddSameL m $
+    singApplyF (f_Add @@ m) $
     natMulComm n m
 
 instance MulComm Nat where
@@ -85,8 +87,22 @@ natAddMulDistL n m k =
     natAddBothSame (natMulComm n k) (natMulComm m k)
 
 
-natMulSameR :: SNat k -> forall n m. n :~: m -> n * k :~: m * k
-natMulSameR _ Refl = Refl
+natMulIsZ :: SNat n -> SNat m -> n * m :~: Z -> Either (n :~: Z) (m :~: Z)
+natMulIsZ SZ _ _           = Left Refl
+natMulIsZ _ SZ _           = Right Refl
+natMulIsZ (SS n) (SS m) eq = case eq of {}
 
-natMulSameL :: SNat k -> forall n m. n :~: m -> k * n :~: k * m
-natMulSameL _ Refl = Refl
+natMulIs1 :: SNat n -> SNat m -> n * m :~: N1 -> (n :~: N1, m :~: N1)
+natMulIs1 SZ _ eq                   = case eq of {}
+natMulIs1 n SZ eq                   = case trans (sym $ natMulZ n) eq of {}
+natMulIs1 (SS SZ) (SS SZ) _         = (Refl, Refl)
+natMulIs1 (SS _) (SS (SS _)) eq     = case eq of {}
+natMulIs1 n@(SS (SS _)) m@(SS _) eq = case trans (mulComm m n) eq of {}
+
+
+-- natMulSameL :: SNat k -> SNat n -> SNat m -> S k * n :~: S k * m -> n :~: m
+-- natMulSameL SZ n m eq     = gcastWith (addZeroR n) $ gcastWith (addZeroR m) eq
+-- natMulSameL (SS k) n m eq = _       -- n + k*n = m + k*m =?=> n = m
+
+-- natMulSameR :: SNat k -> forall n m. n * k :~: m * k -> n :~: m
+-- natMulSameR _ Refl = Refl

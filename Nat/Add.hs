@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds    #-}
 {-# LANGUAGE GADTs        #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Nat.Add where
 
@@ -8,6 +9,7 @@ import           Data.Type.Equality
 
 import           Add
 import           Nat.Defs
+import           Single
 
 instance Add Nat where
     type Z + m = m
@@ -49,21 +51,22 @@ instance AddMonoid Nat where
     addZeroL n = Refl
     addZeroR = natAddZ
 
-natAddSameR :: SNat k -> forall n m. n :~: m -> n + k :~: m + k
-natAddSameR _ Refl = Refl
+natAddBothSame :: forall n m. n :~: m -> forall k l. k :~: l -> n + k :~: m + l
+natAddBothSame Refl Refl = Refl
 
-natAddSameL :: SNat k -> forall n m. n :~: m -> k + n :~: k + m
-natAddSameL _ Refl = Refl
+natAddSameL :: SNat k -> forall n m. k + n :~: k + m -> n :~: m
+natAddSameL SZ eq     = eq
+natAddSameL (SS k) eq = natAddSameL k $ inner eq
+
+natAddSameR :: SNat k -> SNat n -> SNat m -> n + k :~: m + k -> n :~: m
+natAddSameR k n m eq = natAddSameL k $ trans (addComm k n) $ trans eq $ addComm m k
 
 natAddSameRS :: SNat k -> SNat n -> forall m. n :~: m -> n + k :~: m + k
 natAddSameRS _ _ Refl = Refl
-
-natAddBothSame :: forall n m. n :~: m -> forall k l. k :~: l -> n + k :~: m + l
-natAddBothSame Refl Refl = Refl
 
 natAddFlipL :: SNat n -> SNat m -> SNat k -> n + (m + k) :~: m + (n + k)
 natAddFlipL n m k =
     trans (natAddAssoc n m k) $
     flip trans (sym $ natAddAssoc m n k) $
-    natAddSameR k $
+    singApplyF (f_Flip @@ f_Add @@ k) $
     natAddComm n m

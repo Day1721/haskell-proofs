@@ -49,7 +49,7 @@ natSumSame (SS n) m =       -- m + Sum (K m) n = m * S n
     flip trans (
         sym $ natMulS m n
     ) $                     -- m + Sum (K m) n = m + m * n
-    natAddSameL m $
+    singApplyF (f_Add @@ m) $
     natSumSame n m
 
 
@@ -60,7 +60,7 @@ natSumId (SS (n :: SNat n)) =   -- 2 * (S n + Sum id (S n)) = S n * S S n
         natAddMulDistL (SS n) (natSum f_Id (SS n)) n2
     ) $                         -- 2 * S n + 2*Sum id (S n) = S n * S S n
     trans (                                     -- 2 * S n + 2*Sum id (S n) = 2 * S n + n * S n
-        natAddSameL (n2 .*. SS n) $            -- 2*Sum id (S n) = n * S n
+        singApplyF (f_Add @@ (n2 .*. SS n)) $   -- 2*Sum id (S n) = n * S n
         natSumId n
     ) $                         -- 2 * S n + n * S n = S n * S S n
     flip trans (
@@ -89,11 +89,11 @@ sumSplit (SS n) f g =           -- (f n + g n) + Sum (f + g) n = (f n + Sum f n)
 
 natSumMulOut :: SNat n -> SNat m -> SFunction f -> Sum (F_Compose @@ (F_Mul @@ m) @@ f) n :~: m * Sum f n
 natSumMulOut SZ m _ = sym $ natMulZ m
-natSumMulOut (SS n) m f =               -- m * f n + Sum _ n = m * (f n + Sum f n)
+natSumMulOut (SS n) m f =                           -- m * f n + Sum _ n = m * (f n + Sum f n)
     flip trans (
         sym $ natAddMulDistL (applyFunc f n) (natSum f n) m
-    ) $                                 -- m * f n + Sum _ n = m * f n + m * Sum f n
-    natAddSameL (m .*. applyFunc f n) $ -- Sum _ n = m * Sum f n
+    ) $                                             -- m * f n + Sum _ n = m * f n + m * Sum f n
+    singApplyF (f_Add @@ (m .*. applyFunc f n)) $   -- Sum _ n = m * Sum f n
     natSumMulOut n m f
 
 natSumEqEach :: SNat n -> SFunction (f :: Nat ~> Nat) -> SFunction g -> (forall m. SNat m -> f @@ m :~: g @@ m) -> Sum f n :~: Sum g n
@@ -125,15 +125,16 @@ natSumOdd SZ = Refl
 natSumOdd (SS n) =                      -- S (n + n + 0) + Sum NatOdd n = S n + n * S n
     let isum = natSum f_NatOdd n in
     apply Refl $                        -- (n + (n + 0)) + Sum NatOdd n = n + n * S n
-    trans (
-        natAddSameR isum $ natAddSameL n $ natAddZ n
+    trans (                                     -- (n + (n + 0)) + Sum NatOdd n = (n + n) + Sum NatOdd n
+        singApplyF (f_Flip @@ f_Add @@ isum) $  -- n + (n + 0) = n + n
+        singApplyF (f_Add @@ n) $ addZeroR n
     ) $                                 -- (n + n) + Sum NatOdd n = n + n * S n
     trans (
         sym $ natAddAssoc n n isum
     ) $                                 -- n + (n + Sum NatOdd n) = n + n * S n
-    natAddSameL n $                     -- n + Sum NatOdd n = n * S n
+    singApplyF (f_Add @@ n) $           -- n + Sum NatOdd n = n * S n
     flip trans (sym $ natMulS n n) $    -- n + Sum NatOdd n = n + n * n
-    natAddSameL n $                     -- Sum NatOdd n = n * n
+    singApplyF (f_Add @@ n) $           -- Sum NatOdd n = n * n
     natSumOdd n
 
 natSumOdd' :: SNat n -> Sum NatOdd n :~: n * n
@@ -147,13 +148,13 @@ natSumOdd' (n :: SNat n) =      -- Sum NatOdd n = n * n
         sumSplit n (f_Const @@ n1) f_NatEven
     ) $                         -- Sum (K 1) n + Sum NatEven n = n * n
     trans (
-        natAddSameR (natSum f_NatEven n) $ trans
+        singApplyF (f_Flip @@ f_Add @@ natSum f_NatEven n) $ trans
             (natSumSame n n1)
             (natAddZ n)
     ) $                         -- n + Sum NatEven n = n * n
     case n of
         SZ    -> Refl
-        SS n' -> natAddSameL n $ natSumEven n'
+        SS n' -> singApplyF (f_Add @@ n) $ natSumEven n'
 
 
 natDoubleSumSwap :: AddAbelMonoid k => SNat n -> SNat m -> SFunction (f :: Nat ~> Nat ~> k) -> Sum (Sum f m) n :~: Sum (Sum (F_Flip @@ f) n) m

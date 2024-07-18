@@ -13,6 +13,8 @@ import           Nat
 import           Prelude            hiding (Int)
 import           Single
 
+-- IPos n ~ S n
+-- INeg n ~ - S n
 data Int = IZ | IPos Nat | INeg Nat
 
 data SInt :: Int -> Type where
