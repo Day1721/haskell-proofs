@@ -1,5 +1,6 @@
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NoStarIsType           #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Ops where
 

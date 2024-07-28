@@ -30,6 +30,9 @@ infixr 0 ~>
 type family Apply (f :: a ~> b) (x :: a) :: b
 type f @@ x = Apply f x
 
+type F_Desing = F_Desing0
+data F_Desing0 :: k ~> r
+type instance Apply F_Desing0 t = Desing t
 
 newtype SFunction (f :: a ~> b) = SFunction {
     applyFunc :: forall (x :: a). Sing x -> Sing (f @@ x)

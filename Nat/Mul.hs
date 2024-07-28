@@ -98,11 +98,3 @@ natMulIs1 n SZ eq                   = case trans (sym $ natMulZ n) eq of {}
 natMulIs1 (SS SZ) (SS SZ) _         = (Refl, Refl)
 natMulIs1 (SS _) (SS (SS _)) eq     = case eq of {}
 natMulIs1 n@(SS (SS _)) m@(SS _) eq = case trans (mulComm m n) eq of {}
-
-
--- natMulSameL :: SNat k -> SNat n -> SNat m -> S k * n :~: S k * m -> n :~: m
--- natMulSameL SZ n m eq     = gcastWith (addZeroR n) $ gcastWith (addZeroR m) eq
--- natMulSameL (SS k) n m eq = _       -- n + k*n = m + k*m =?=> n = m
-
--- natMulSameR :: SNat k -> forall n m. n * k :~: m * k -> n :~: m
--- natMulSameR _ Refl = Refl
