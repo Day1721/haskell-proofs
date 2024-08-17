@@ -68,5 +68,5 @@ natAddFlipL :: SNat n -> SNat m -> SNat k -> n + (m + k) :~: m + (n + k)
 natAddFlipL n m k =
     trans (natAddAssoc n m k) $
     flip trans (sym $ natAddAssoc m n k) $
-    singApplyF (f_Flip @@ f_Add @@ k) $
+    singApplyF (addR k) $
     natAddComm n m

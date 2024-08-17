@@ -4,3 +4,6 @@ import           Nat.Add
 import           Nat.Defs
 import           Nat.Mul
 import           Nat.Ord
+import           Nat.Sub
+
+type NatSub n m = n - m

@@ -12,18 +12,21 @@ import           Data.Void
 
 import           Unsafe.Coerce
 
+type Not b = b -> Void
+
+type a =/= b = Not (a :~: b)
+infix 4 =/=
+absurd = Data.Void.absurd
+
 class Single k where
     type Sing (a :: k) = r | r -> a
     type Desing k = r | r -> k
     fromSing :: Sing (a :: k) -> Desing k
     withSing :: Desing k -> (forall a. Sing (a :: k) -> r) -> r
 
-
 class Single k => EqDec k where
-    (=?=) :: Sing (a :: k) -> Sing (b :: k) -> Either (a :~: b) (a :~: b -> Void)
+    (=?=) :: Sing (a :: k) -> Sing (b :: k) -> Either (a :~: b) (a =/= b)
 
-type a =/= b = a :~: b -> Void
-infix 4 =/=
 
 type a ~> b = (a, b) -> Type
 infixr 0 ~>
@@ -40,6 +43,10 @@ newtype SFunction (f :: a ~> b) = SFunction {
 (@@) :: SFunction (f :: a ~> b) -> forall x. Sing (x :: a) -> Sing (f @@ x)
 (@@) = applyFunc
 infixl 8 @@
+
+($@) :: SFunction (f :: a ~> b) -> forall x. Sing (x :: a) -> Sing (f @@ x)
+($@) = applyFunc
+infixr 0 $@
 
 instance (Single a, Single b) => Single (a ~> b) where
     type Sing f = SFunction f
@@ -74,6 +81,11 @@ f_Const = SFunction { applyFunc = f_Const1 } :: SFunction F_Const
 f_Const1 :: Sing x -> SFunction (F_Const1 x)
 f_Const1 x = SFunction { applyFunc = const x }
 
+-- Alias K a = Const a
+type F_K a = F_Const @@ a
+f_K :: Sing a -> SFunction (F_K a)
+f_K = (f_Const @@)
+
 -- Compose :: (a -> b) -> (b -> c) -> a -> c
 type F_Compose = F_Compose0
 data F_Compose0 :: (b ~> c) ~> (a ~> b) ~> a ~> c
@@ -90,7 +102,14 @@ f_Compose1 f = SFunction { applyFunc = f_Compose2 f }
 f_Compose2 :: SFunction f -> SFunction g -> SFunction (F_Compose2 f g)
 f_Compose2 f g = SFunction { applyFunc = \x -> f @@ (g @@ x) }
 
+-- Alias f <@> g = Compose f g
+type f <@> g = F_Compose @@ f @@ g
+(<@>) :: SFunction f -> SFunction g -> SFunction (f <@> g)
+(<@>) f g = f_Compose @@ f @@ g
+infixr 7 <@>
 
+
+-- SApply :: (a -> b -> c) -> (a -> b) -> a -> c
 type F_SApply = F_SApply0
 data F_SApply0 :: (a ~> b ~> c) ~> (a ~> b) ~> a ~> c
 data F_SApply1 (x :: a ~> b ~> c) :: (a ~> b) ~> a ~> c
@@ -107,6 +126,7 @@ f_SApply2 :: SFunction x -> SFunction y -> SFunction (F_SApply2 x y)
 f_SApply2 x y = SFunction { applyFunc = \z -> x @@ z @@ (y @@ z) }
 
 
+-- Flip :: (a -> b -> c) -> b -> a -> c
 type F_Flip = F_Flip0
 data F_Flip0 :: (a ~> b ~> c) ~> b ~> a ~> c
 data F_Flip1 (f :: a ~> b ~> c) :: b ~> a ~> c

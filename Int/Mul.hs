@@ -54,7 +54,7 @@ intMulNatInv :: SInt i -> SNat n -> IntMulNat (AddInv i) n :~: AddInv (IntMulNat
 intMulNatInv i SZ     = Refl
 intMulNatInv i (SS n) =  flip trans (sym $ groupInvAddSwap i $ intMulNat i n) $
     flip trans (addComm (addInv i) $ addInv $ intMulNat i n) $
-    singApplyF (f_Add @@ addInv i) $
+    singApplyF (addL $ addInv i) $
     intMulNatInv i n
 
 intMulInvL :: SInt i -> SInt j -> AddInv (i * j) :~: AddInv i * j
@@ -72,7 +72,7 @@ intAddMulNatDist :: SInt i -> SInt j -> SNat n -> IntMulNat (i + j) n :~: IntMul
 intAddMulNatDist i j SZ = Refl
 intAddMulNatDist i j (SS n) =                                               -- (i + j) + mul (i + j) n = (i + mul i n) + (j + mul j n)
     flip trans (groupAdd4SwapInner i j (intMulNat i n) $ intMulNat j n) $   -- (i + j) + mul (i + j) n = (i + j) + (mul i n + mul j n)
-    singApplyF (f_Add @@ (i .+. j)) $ intAddMulNatDist i j n
+    singApplyF (addL $ i .+. j) $ intAddMulNatDist i j n
 
 intAddMulDistL :: SInt i -> SInt j -> SInt k -> k * (i + j) :~: k * i + k * j
 intAddMulDistL i j SIZ       = Refl
@@ -114,7 +114,7 @@ intMulNatS i (SS n) = go i n where
         flip trans (sym $ intAddSL (SIPos n) $ i .+. intMulNat i (SS n)) $  -- S (i + mul (S i) (S n)) = S (pos n + (i + mul i (S n)))
         singApplyF f_ZS $                                                   -- i + mul (S i) (S n) = pos n + (i + mul i (S n))
         flip trans (addFlipL i (SIPos n) $ intMulNat i (SS n)) $            -- i + mul (S i) (S n) = i + (pos n + mul i (S n))
-        singApplyF (f_Add @@ i) $ go i n
+        singApplyF (addL i) $ go i n
 
 intMulNatP :: SInt i -> SNat n -> IntMulNat (ZP i) n :~: AddInv (N2I n) + IntMulNat i n
 intMulNatP i SZ     = Refl
@@ -126,7 +126,7 @@ intMulNatP i (SS n) = go i n where
         flip trans (sym $ intAddPL (SINeg n) $ i .+. intMulNat i (SS n)) $
         singApplyF f_ZP $
         flip trans (addFlipL i (SINeg n) $ intMulNat i (SS n)) $
-        singApplyF (f_Add @@ i) $ go i n
+        singApplyF (addL i) $ go i n
 
 intMulSR :: SInt i -> SInt j -> i * ZS j :~: i + i * j
 intMulSR SIZ j       = Refl
@@ -143,7 +143,7 @@ intMulPos3 :: SNat n -> SNat m -> IPos n * IPos m :~: N2I (S n * S m)
 intMulPos3 SZ m     = gcastWith (addZeroR m) $ addZeroR $ SIPos m
 intMulPos3 (SS n) m =                                       -- pos m + pos n * pos m = n2i$ S m + S n * S m
     flip trans (sym $ intAddN2I (SS m) (SS n .*. SS m)) $   -- pos m + pos n * pos m = pos m + n2i$ S n * S m
-    singApplyF (f_Add @@ SIPos m) $ intMulPos3 n m
+    singApplyF (addL $ SIPos m) $ intMulPos3 n m
 intMulNeg3 :: SNat n -> SNat m -> INeg n * INeg m :~: N2I (S n * S m)
 intMulNeg3 = intMulPos3
 
@@ -160,14 +160,14 @@ intAddMulDistR (SIPos (SS n)) j k =                     -- (pos n + S j) * k :~:
     gcastWith (intAddSR (SIPos n) j) $                  -- S (pos n + j) * k :~: (k + pos n * k) + j * k
     trans (intMulSL (SIPos n .+. j) k) $                -- k + (pos n + j) * k :~: (k + pos n * k) + j * k
     flip trans (addAssoc k (SIPos n .*. k) (j .*. k)) $ -- k + (pos n + j) * k :~: k + (pos n * k + j * k)
-    singApplyF (f_Add @@ k) $                           -- (pos n + j) * k :~: pos n * k + j * k
+    singApplyF (addL k) $                               -- (pos n + j) * k :~: pos n * k + j * k
     intAddMulDistR (SIPos n) j k
 intAddMulDistR (SINeg SZ) j k = gcastWith (addZeroR $ addInv k) $ intMulPL j k
 intAddMulDistR (SINeg (SS n)) j k =                                 -- (neg n + P j) * k :~: (inv k + neg n * k) + j * k
     gcastWith (intAddPR (SINeg n) j) $                              -- P (neg n + j) * k :~: (inv k + neg n * k) + j * k
     trans (intMulPL (SINeg n .+. j) k) $                            -- inv k + (neg n + j) * k :~: (inv k + neg n * k) + j * k
     flip trans (addAssoc (addInv k) (SINeg n .*. k) (j .*. k)) $    -- inv k + (neg n + j) * k :~: inv k + (pos n * k + j * k)
-    singApplyF (f_Add @@ addInv k) $                                -- (neg n + j) * k :~: neg n * k + j * k
+    singApplyF (addL $ addInv k) $                                  -- (neg n + j) * k :~: neg n * k + j * k
     intAddMulDistR (SINeg n) j k
 
 
@@ -179,14 +179,14 @@ instance MulMonoid Int where
         go SZ j k     = gcastWith (addZeroR j) $ addZeroR $ j .*. k
         go (SS n) j k =                                                 -- j * k + pos n * (j * k) = (j + pos n * j) * k
             flip trans (sym $ intAddMulDistR j (SIPos n .*. j) k) $     -- j * k + pos n * (j * k) = j * k + (pos n * j) * k
-            singApplyF (f_Add @@ (j .*. k)) $ go n j k
+            singApplyF (addL $ j .*. k) $ go n j k
     mulAssoc (SINeg n) j k = go n j k where
         go :: SNat n -> SInt j -> SInt k -> INeg n * (j * k) :~: (INeg n * j) * k
         go SZ j k = gcastWith (addZeroR $ addInv j) $ trans (addZeroR $ addInv $ j .*. k) $ intMulInvL j k
         go (SS n) j k =                                                         -- inv (j * k) + neg n * (j * k) = (inv j + neg n * j) * k
             flip trans (sym $ intAddMulDistR (addInv j) (SINeg n .*. j) k) $    -- inv (j * k) + neg n * (j * k) = inv j * k + (neg n * j) * k
             gcastWith (intMulInvL j k) $                                        -- inv j * k + neg n * (j * k) = inv j * k + (neg n * j) * k
-            singApplyF (f_Add @@ (addInv j .*. k)) $ go n j k
+            singApplyF (addL $ addInv j .*. k) $ go n j k
     type MulOne = Z1
     mulOneL = addZeroR
     mulOneR SIZ            = Refl
@@ -196,7 +196,7 @@ instance MulMonoid Int where
     mulOneR (SINeg (SS n)) = singApplyF f_ZP $ mulOneR (SINeg n)
 
 
-instance AddMulRing Int where
+instance AddMulRingBase Int where
   addMulDistL = intAddMulDistL
   addMulDistR = intAddMulDistR
 
@@ -213,10 +213,10 @@ instance MulComm Int where
     mulComm (SIPos n) b = go n b where
         go :: SNat n -> SInt b -> IPos n * b :~: b * IPos n
         go SZ b = trans (addZeroR b) $ sym $ mulOneR b
-        go (SS n) b = trans (singApplyF (f_Add @@ b) $ go n b) $
+        go (SS n) b = trans (singApplyF (addL b) $ go n b) $
             sym $ intMulSR b $ SIPos n
     mulComm (SINeg n) b = go n b where
         go :: SNat n -> SInt b -> INeg n * b :~: b * INeg n
         go SZ b = trans (addZeroR $ addInv b) $ sym $ mulM1R b
-        go (SS n) b = trans (singApplyF (f_Add @@ addInv b) $ go n b) $
+        go (SS n) b = trans (singApplyF (addL $ addInv b) $ go n b) $
             sym $ intMulPR b $ SINeg n

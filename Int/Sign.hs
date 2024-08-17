@@ -44,16 +44,16 @@ instance Absolute Int where
             trans (sym $ addPos3 n m) $ sym $ addZeroR $ SIPos n .+. SIPos m
         SIPos k -> flip castWith (IntNatEx $ SS (SS m) .+. m) $ apply Refl $        -- pos (S m + m) = (pos n + pos m) + inv (pos k)   where  pos k = pos n + neg m
             trans (sym $ addPos3 m m) $                                             -- pos m + pos m = (pos n + pos m) + inv (pos k)   where  pos k = pos n + neg m   ====  (pos n + pos m) + (pos m + neg n)
-            sym $ trans (singApplyF (f_Add @@ (SIPos n .+. SIPos m)) $
+            sym $ trans (singApplyF (addL $ SIPos n .+. SIPos m) $
                 trans (groupInvSubSwap (SIPos n) (SIPos m)) (addComm (SIPos m) (SINeg n))
             ) $                                                                     -- (pos n + pos m) + (neg n + pos m) = pos m + pos m
             trans (groupAdd4SwapInner (SIPos n) (SIPos m) (SINeg n) (SIPos m)) $    -- (pos n + neg n) + (pos m + pos m) = pos m + pos m
-            singApplyF (f_Flip @@ f_Add @@ (SIPos m .+. SIPos m)) $ addInvZR $ SIPos n
+            singApplyF (addR $ SIPos m .+. SIPos m) $ addInvZR $ SIPos n
         SINeg k -> flip castWith (IntNatEx $ SS (SS n) .+. n) $ apply Refl $        -- pos (S n + n) = (pos n + pos m) + (pos n + neg m)
             trans (sym $ addPos3 n n) $ sym $                                       -- (pos n + pos m) + (pos n + neg m) = pos n + pos n
             trans (groupAdd4SwapInner (SIPos n) (SIPos m) (SIPos n) (SINeg m)) $    -- (pos n + pos n) + (pos m + neg m) = pos n + pos n
             flip trans (addZeroR $ SIPos n .+. SIPos n) $                           -- (pos n + pos n) + (pos m + neg m) = (pos n + pos n) + 0
-            singApplyF (f_Add @@ (SIPos n .+. SIPos n)) $                           -- pos m + neg m = 0
+            singApplyF (addL $ SIPos n .+. SIPos n) $                               -- pos m + neg m = 0
             addInvZR (SIPos m)
     absTriangle (SINeg n) (SIPos m) =               -- abs (neg n + pos m) = pos n + pos m
         gcastWith (addComm (SINeg n) (SIPos m)) $   -- abs (pos m + neg n) = pos n + pos m

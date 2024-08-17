@@ -1,9 +1,10 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 module SFuncUnsafe where
 
 import           Data.Type.Equality
 import           Data.Void
-import           Ops
+import           Ord
 import           Single
 import           Unsafe.Coerce
 

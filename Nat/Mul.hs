@@ -29,16 +29,16 @@ natMulZ (SS n) = natMulZ n
 
 natMulS :: SNat n -> SNat m -> n * S m :~: n + n * m
 natMulS SZ _ = Refl
-natMulS (SS n) m =                  -- S m + n * S m = S n + (m + n * m)
-    apply Refl $                    -- m + n * S m = n + (m + n * m)
+natMulS (SS n) m =          -- S m + n * S m = S n + (m + n * m)
+    apply Refl $            -- m + n * S m = n + (m + n * m)
     flip trans (
         sym $ natAddComm n $ SS n .*. m
-    ) $                             -- m + n * S m = (m + n * m) + n
+    ) $                     -- m + n * S m = (m + n * m) + n
     flip trans (
         natAddAssoc m (n .*. m) n
-    ) $                             -- m + n * S m = m + (n * m + n)
-    singApplyF (f_Add @@ m) $       -- n * S m = n * m + n
-    trans (natMulS n m) $
+    ) $                     -- m + n * S m = m + (n * m + n)
+    singApplyF (addL m) $   -- n * S m = n * m + n
+    trans (natMulS n m) $   -- n + n * m = n * m + n
     natAddComm n $ n .*. m
 
 
@@ -48,7 +48,7 @@ natAddMulDistR (SS n) m k =     -- k + (n + m) * k = (k + n * k) + m * k
     flip trans (
         natAddAssoc k (n .*. k) (m .*. k)
     ) $                         -- k + (n + m) * k = k + (n * k + m * k)
-    singApplyF (f_Add @@ k) $
+    singApplyF (addL k) $
     natAddMulDistR n m k
 
 
@@ -58,7 +58,7 @@ natMulAssoc (SS n) m k =        -- m * k + n * (m * k) = (m + n * m) * k
     flip trans (
         sym $ natAddMulDistR m (n .*. m) k
     ) $                         -- m * k + n * (m * k) = m * k + (n * m) * k
-    singApplyF (f_Add @@ (m .*. k)) $
+    singApplyF (addL $ m .*. k) $
     natMulAssoc n m k
 
 instance MulMonoid Nat where
@@ -74,18 +74,18 @@ natMulComm (SS n) m =           -- m + n * m = m * S n
     flip trans (
         sym $ natMulS m n
     ) $                         -- m + n * m = m + m * n
-    singApplyF (f_Add @@ m) $
+    singApplyF (addL m) $
     natMulComm n m
 
 instance MulComm Nat where
     mulComm = natMulComm
 
-natAddMulDistL :: SNat n -> SNat m -> SNat k -> k * (n + m) :~: k * n + k * m
-natAddMulDistL n m k =
-    trans (natMulComm k $ n .+. m) $
-    trans (natAddMulDistR n m k) $
-    natAddBothSame (natMulComm n k) (natMulComm m k)
-
+instance AddMulRingBase Nat where
+    addMulDistL n m k =
+        trans (natMulComm k $ n .+. m) $
+        trans (natAddMulDistR n m k) $
+        natAddBothSame (natMulComm n k) (natMulComm m k)
+    addMulDistR = natAddMulDistR
 
 natMulIsZ :: SNat n -> SNat m -> n * m :~: Z -> Either (n :~: Z) (m :~: Z)
 natMulIsZ SZ _ _           = Left Refl

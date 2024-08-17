@@ -9,12 +9,12 @@ module Nat.Ord where
 import           Add
 import           Data.Kind
 import           Data.Type.Equality
-import           Data.Void
 import           Mul
 import           Nat.Add
 import           Nat.Defs
 import           Nat.Mul
-import           Ops
+import           Ord
+import           Single
 
 data NatLe n m where
     NatLeZ :: forall n. NatLe n n
@@ -24,12 +24,15 @@ instance PartOrd Nat where
     type n <= m = NatLe n m
 
     leRefl _ = NatLeZ
-    leTrans _ _ _ aleb NatLeZ             = aleb
-    leTrans a b (SS c) aleb (NatLeS blec) = NatLeS $ leTrans a b c aleb blec
+    leTrans _ _ _ = natLeTrans
     leAsym _ _ NatLeZ _           = Refl
     leAsym a (SS b) (NatLeS aleb) sblea = let sbleb = leTrans (SS b) a b sblea aleb in absurd $ natSnLeN b sbleb
 
-natSmLeZ :: S n <= Z -> Void
+natLeTrans :: (n :: Nat) <= m -> m <= k -> n <= k
+natLeTrans nlem NatLeZ        = nlem
+natLeTrans nlem (NatLeS mlek) = NatLeS $ natLeTrans nlem mlek
+
+natSmLeZ :: Not (S n <= Z)
 natSmLeZ le = case le of {}
 
 natLeDown :: S n <= S m -> n <= m
@@ -40,7 +43,7 @@ natLeDown (NatLeS nlem@(NatLeS _)) = NatLeS $ natLeDown nlem
 natLeDown' :: SNat n -> SNat m -> S n <= S m -> n <= m
 natLeDown' n m = natLeDown
 
-natSnLeN :: SNat n -> S n <= n -> Void
+natSnLeN :: SNat n -> Not (S n <= n)
 natSnLeN SZ le     = natSmLeZ le
 natSnLeN (SS n) le = natSnLeN n $ natLeDown le
 
@@ -90,17 +93,34 @@ natLeDiff n m NatLeZ = LeDiffEx SZ Refl
 natLeDiff n (SS m) (NatLeS le) = case natLeDiff n m le of
     LeDiffEx k eq -> LeDiffEx (SS k) $ apply Refl eq
 
-data NatCompare :: Nat -> Nat -> Type where
-    NatCmpLt :: forall n m. S n <= m -> NatCompare n m
-    NatCmpEq :: forall n m. n :~: m -> NatCompare n m
-    NatCmpGt :: forall n m. S m <= n -> NatCompare n m
 
-leCompare :: SNat n -> SNat m -> NatCompare n m
-leCompare n m = case leDec n m of
-    Left NatLeZ       -> NatCmpEq Refl
-    Left (NatLeS le)  -> let SS m' = m in NatCmpLt $ natLeUp le
-    Right NatLeZ      -> NatCmpEq Refl
-    Right (NatLeS le) -> let SS n' = n in NatCmpGt $ natLeUp le
+natLtTrans :: (n :: Nat) < m -> m < k -> n < k
+natLtTrans nltm mltk = natLeTrans nltm $ natLeTrans (NatLeS NatLeZ) mltk
+
+instance StrictPartOrd Nat where
+    type (<) n m = NatLe (S n) m
+    ltNRefl = natSnLeN
+    ltTrans _ _ _ = natLtTrans
+    ltAsym n m nltm mltn = ltNRefl n $ ltTrans n m n nltm mltn
+
+natLe2Lt :: (n :: Nat) <= m -> Either (n :~: m) (n < m)
+natLe2Lt NatLeZ      = Left Refl
+natLe2Lt (NatLeS le) = Right $ natLeUp le
+
+natLt2Le :: (n :: Nat) < m -> n <= m
+natLt2Le = natLeTrans (NatLeS NatLeZ)
+
+instance FullPartOrd Nat where
+  le2lt _ _ = natLe2Lt
+  lt2le _ _ = natLt2Le
+
+
+instance TotalStrictOrd Nat where
+    ltDec n m = case leDec n m of
+        Left NatLeZ       -> SO_EQ Refl
+        Left (NatLeS le)  -> let SS m' = m in SO_LT $ natLeUp le
+        Right NatLeZ      -> SO_EQ Refl
+        Right (NatLeS le) -> let SS n' = n in SO_GT $ natLeUp le
 
 
 natNLeNplusKL :: SNat n -> SNat k -> n <= k + n
@@ -186,14 +206,14 @@ natLeMulSplit n m k l le = case (leDec n m, leDec k l) of
 
 natMulSameL :: SNat k -> SNat n -> SNat m -> S k * n :~: S k * m -> n :~: m
 natMulSameL SZ n m eq     = gcastWith (addZeroR n) $ gcastWith (addZeroR m) eq
-natMulSameL (SS k) n m eq = case leCompare n m of
-    NatCmpEq eq    -> eq
-    NatCmpLt snlem ->
+natMulSameL (SS k) n m eq = case ltDec n m of
+    SO_EQ eq    -> eq
+    SO_LT snlem ->
         let mul_snlem = natLeMulMonoL (SS $ SS k) (SS n) m snlem in
         let mul_snlen = leCastR (sym eq) mul_snlem in
         let unmul = natLeMulMonoLRev (SS k) (SS n) n mul_snlen in
         absurd $ natSnLeN n unmul
-    NatCmpGt smlen ->
+    SO_GT smlen ->
         let mul_smlen = natLeMulMonoL (SS $ SS k) (SS m) n smlen in
         let mul_smlem = leCastR eq mul_smlen in
         let unmul = natLeMulMonoLRev (SS k) (SS m) m mul_smlem in

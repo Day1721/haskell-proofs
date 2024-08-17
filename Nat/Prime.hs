@@ -2,18 +2,19 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+
 module Nat.Prime where
 import           Add
 import           Data.Type.Equality
-import           Data.Void
 import           Nat
 import           Nat.Div
 import           Nat.Ord
-import           Ops
+import           Ord
+import           Single
 
 
-type NatPrimeAll (n :: Nat) = forall m. SNat m -> N2 <= m -> NatDivides m n -> m :~: n
-type NatPrime (n :: Nat) = (N2 <= n, NatPrimeAll n)
+type NatPrimeAll (n :: Nat) = forall m. SNat m -> m > N1 -> NatDivides m n -> m :~: n
+type NatPrime (n :: Nat) = (n > N1, NatPrimeAll n)
 
 n2Prime :: NatPrime N2
 n2Prime = (NatLeZ, n2PrimeAll) where
@@ -24,9 +25,9 @@ n2Prime = (NatLeZ, n2PrimeAll) where
         SS (SS m) -> let eq' = natLeDown $ natLeDown le in gcastWith (natLeZEqZ eq') Refl
 
 data NatComposite (n :: Nat) where
-    NatComposite :: SNat k -> N2 <= k -> S k <= n -> NatDivides k n -> NatComposite n
+    NatComposite :: SNat k -> k > N1 -> k < n -> NatDivides k n -> NatComposite n
 
-primeCheck :: SNat n -> N2 <= n -> Either (NatPrime n) (NatComposite n)
+primeCheck :: SNat n -> n > N1 -> Either (NatPrime n) (NatComposite n)
 primeCheck SZ le = case le of {}
 primeCheck n@(SS n') le = case go n le n' (natLeDown le) NatLeZ of
         Left prime      -> Left (le, \m lem mdivn -> case natDividesLe m mdivn of
@@ -37,9 +38,7 @@ primeCheck n@(SS n') le = case go n le n' (natLeDown le) NatLeZ of
             )
         Right composite -> Right composite
     where
-    le2 :: SNat n -> N2 <= N2 + n
-    le2 n = natLeAddL n n2 n2 NatLeZ
-    go :: SNat n -> N2 <= n -> SNat m -> N1 <= m -> S m <= n -> Either (forall k. SNat k -> N2 <= k -> k <= m -> NatDivides k n -> Void) (NatComposite n)
+    go :: SNat n -> n > N1 -> SNat m -> m > Z -> m < n -> Either (forall k. SNat k -> k > N1 -> k <= m -> Not (NatDivides k n)) (NatComposite n)
     go SZ le _ _                         _ = case le of {}
     go (SS SZ) le _ _                    _ = case natLeDown le of {}
     go _ _ SZ le                         _ = case le of {}
@@ -54,9 +53,9 @@ primeCheck n@(SS n') le = case go n le n' (natLeDown le) NatLeZ of
 
 
 data NatPrimeDivisor n where
-    NatPrimeDivisor :: N2 <= n -> SNat p -> NatDivides p n -> NatPrime p -> NatPrimeDivisor n
+    NatPrimeDivisor :: n > N1 -> SNat p -> NatDivides p n -> NatPrime p -> NatPrimeDivisor n
 
-natPrimeDivisor :: SNat n -> N2 <= n -> NatPrimeDivisor n
+natPrimeDivisor :: SNat n -> n > N1 -> NatPrimeDivisor n
 natPrimeDivisor n le = case primeCheck n le of
     Left prime     -> NatPrimeDivisor le n (natDividesRefl n) prime
     Right (NatComposite k lek klesn kdivn) -> case natPrimeDivisor k lek of
